@@ -75,6 +75,26 @@ async function saveDoc(col,id,data){
   });
   return chains[path];
 }
+async function deleteDoc(col,id){
+  delete S[col][id]; cache();
+  if(!fam) return;
+  const path=col+"/"+id;
+  chains[path]=(chains[path]||Promise.resolve()).then(()=>fam.collection(col).doc(id).delete()).catch(e=>console.warn("delete failed",path,e));
+  return chains[path];
+}
+let resetAsk=null;
+async function doReset(which){
+  const ids = which==="all" ? GIRLS.map(g=>g.id) : [which];
+  ids.forEach(id=>saveDoc("kids",id,defaultKid()));
+  if(which==="all"){
+    const jarIds=new Set(Object.keys(S.jar));
+    if(fam){ try{ (await fam.collection("jar").get()).docs.forEach(d=>jarIds.add(d.id)); }catch(e){ console.warn(e); } }
+    jarIds.forEach(id=>deleteDoc("jar",id));
+    Object.keys(S.redeem).forEach(id=>deleteDoc("redeem",id));
+    try{ Object.keys(localStorage).filter(k=>k.indexOf("bh_cele_")===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  }
+  resetAsk=null; render(); toast(which==="all"?"Everything reset":G(which).en+" reset");
+}
 function subscribeJar(){
   if(!fam) return;
   const wk=weekDays()[0]; if(wk===jarWeek && unsubJar) return;
@@ -613,6 +633,14 @@ function parentHTML(){
    + '<tr><td>Daily reward (shown to the girls)</td><td><input type="text" id="rw" value="'+esc(S.settings.reward)+'"></td></tr>'
    + '<tr><td>Weekly bonus</td><td><input type="text" id="wrw" value="'+esc(S.settings.weekReward)+'"></td></tr>'
    + '<tr><td></td><td><button class="btn small" data-act="savesettings">Save rewards</button> <button class="btn small ghost" data-act="changepin">Change PIN</button></td></tr></table>';
+  s+='<h4>Reset</h4>';
+  if(resetAsk){
+    const what = resetAsk==="all" ? "all progress for all three girls, the star jar and rewards" : "all of "+G(resetAsk).en+"'s letters, stars and stickers";
+    s+='<div class="note warn">This will erase '+what+' on every tablet. It cannot be undone.<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" style="background:var(--bad);box-shadow:none" data-act="resetyes">Yes, reset</button><button class="btn small ghost" data-act="resetno">Cancel</button></div></div>';
+  } else {
+    s+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+GIRLS.map(g=>'<button class="btn small ghost" data-act="resetask" data-w="'+g.id+'">Reset '+g.en+'</button>').join("")+'<button class="btn small ghost" style="color:var(--bad)" data-act="resetask" data-w="all">Reset everything</button></div>';
+    s+='<p style="margin:6px 0 0;color:var(--muted)">Resetting one girl clears her letters, stars and stickers. "Reset everything" also empties the star jar and the reward history. The PIN, settings and family link stay.</p>';
+  }
   s+='</div></div>';
   return s;
 }
@@ -640,13 +668,16 @@ document.addEventListener("click",e=>{
     case "parent": pinBuf=""; overlay={type:"pin",then:{kind:"parent"}}; renderOverlay(); break;
     case "redeem": pinBuf=""; overlay={type:"pin",then:{kind:"redeem",key:b.dataset.key}}; renderOverlay(); break;
     case "pin": pinPress(b.dataset.d); break;
-    case "leaveparent": go(me?"home":"pick"); break;
+    case "leaveparent": resetAsk=null; go(me?"home":"pick"); break;
     case "redeemnow": saveDoc("redeem",b.dataset.key,{at:new Date().toISOString(),girl:null}); render(); break;
     case "setshare": saveDoc("settings","family",Object.assign({},S.settings,{share:+b.dataset.n})); render(); break;
     case "savesettings": { const rw=$("#rw").value.trim()||defaultSettings().reward, wrw=$("#wrw").value.trim()||defaultSettings().weekReward; saveDoc("settings","family",Object.assign({},S.settings,{reward:rw,weekReward:wrw})); toast("Saved"); break; }
     case "famnew": lsSet("bh_family",newFamilyKey()); connect(true); toast("Family started"); break;
     case "famjoin": { const v=($("#famcode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,""); if(v.length!==12){ toast("The code has 12 letters"); break; } lsSet("bh_family",v); connect(false); toast("Linked"); break; }
     case "famleave": try{ localStorage.removeItem("bh_family"); }catch(e){} connect(false); break;
+    case "resetask": resetAsk=b.dataset.w; render(); break;
+    case "resetno": resetAsk=null; render(); break;
+    case "resetyes": doReset(resetAsk); break;
     case "changepin": saveDoc("settings","family",Object.assign({},S.settings,{pin:null})); pinBuf=""; overlay={type:"pin",then:{kind:"parent"}}; renderOverlay(); break;
   }
 });
