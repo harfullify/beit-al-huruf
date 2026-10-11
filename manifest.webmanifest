@@ -1,0 +1,20 @@
+{
+  "name": "بيت الحروف",
+  "short_name": "بيت الحروف",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#CFE6F1",
+  "theme_color": "#1F5FA8",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

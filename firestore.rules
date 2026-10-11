@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each family's data lives under a 12-character family code. Nobody can list families,
+    // so a tablet can only reach the data if it knows the code.
+    match /families/{fam}/{col}/{doc} {
+      allow read, write: if fam.size() == 12 && col in ['kids', 'jar', 'redeem', 'settings'];
+    }
+  }
+}
