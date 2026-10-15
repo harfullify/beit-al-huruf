@@ -532,20 +532,47 @@ function afterGameRender(){
   }
   function dot(p){ seg(p,[p[0]+0.1,p[1]+0.1]); }
 }
+function letterParts(isM,N){
+  // Split the letter into its separate pieces (main body, dots, hamza) so each one can be checked.
+  const lab=new Int32Array(N*N).fill(-1), parts=[];
+  for(let i=0;i<N*N;i++){
+    if(!isM[i] || lab[i]>=0) continue;
+    const id=parts.length, cells=[], stack=[i]; lab[i]=id;
+    while(stack.length){
+      const c=stack.pop(); cells.push(c);
+      const x=c%N, y=(c-x)/N;
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{ const xx=x+dx, yy=y+dy; if(xx<0||yy<0||xx>=N||yy>=N) return; const j=yy*N+xx; if(isM[j] && lab[j]<0){ lab[j]=id; stack.push(j); } });
+    }
+    parts.push(cells);
+  }
+  return parts.filter(c=>c.length>=4);
+}
 function evaluate(){
   const t=trace, N=t.N;
   const m=t.mctx.getImageData(0,0,N,N).data, k=t.ictx.getImageData(0,0,N,N).data;
-  const isM=new Uint8Array(N*N), near=new Uint8Array(N*N);
-  for(let i=0;i<N*N;i++) isM[i]=m[i*4+3]>60?1:0;
+  const isM=new Uint8Array(N*N), near=new Uint8Array(N*N), ink=new Uint8Array(N*N);
+  for(let i=0;i<N*N;i++){ isM[i]=m[i*4+3]>60?1:0; ink[i]=k[i*4+3]>60?1:0; }
   const D=4;
   for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(isM[y*N+x]) for(let dy=-D;dy<=D;dy++) for(let dx=-D;dx<=D;dx++){ const xx=x+dx,yy=y+dy; if(xx>=0&&yy>=0&&xx<N&&yy<N) near[yy*N+xx]=1; }
   let mc=0,cov=0,ic=0,out=0;
-  for(let i=0;i<N*N;i++){ const inked=k[i*4+3]>60; if(isM[i]){ mc++; if(inked) cov++; } if(inked){ ic++; if(!near[i]) out++; } }
+  for(let i=0;i<N*N;i++){ if(isM[i]){ mc++; if(ink[i]) cov++; } if(ink[i]){ ic++; if(!near[i]) out++; } }
   const coverage=mc?cov/mc:0, outside=ic?out/ic:1;
-  if(coverage>=0.6 && outside<0.35){
-    t.done=true; const q=round.qs[round.cur]; q.done=true; q.ok=true;
+  // Every piece of the letter must be traced: the body (60%+) and each dot or hamza (at least a quarter of it, about one finger tap).
+  const parts=letterParts(isM,N), missing=parts.filter(c=>c.filter(i=>ink[i]).length/c.length<(c.length===Math.max(...parts.map(p=>p.length))?0.6:0.25));
+  const q=round.qs[round.cur];
+  if(coverage>=0.6 && outside<0.35 && !missing.length){
+    t.done=true; q.done=true; q.ok=true;
     sfx.ok(); say(rnd(PRAISE)); bumpMastery(q.t,1);
     setTimeout(nextQ,1500);
+  } else if(coverage>=0.6 && outside<0.35 && missing.length){
+    // Body is done but a dot (or the hamza) is not: point at it and remind her.
+    const sc=t.size/N;
+    missing.forEach(c=>{
+      let x0=N,y0=N,x1=0,y1=0; c.forEach(i=>{ const x=i%N, y=(i-x)/N; x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); });
+      const cx=(x0+x1+1)/2*sc, cy=(y0+y1+1)/2*sc, r=Math.max(x1-x0+1,y1-y0+1)*sc/2+12;
+      t.ctx.save(); t.ctx.setLineDash([6,6]); t.ctx.lineWidth=4; t.ctx.strokeStyle="#F2B82F"; t.ctx.beginPath(); t.ctx.arc(cx,cy,r,0,Math.PI*2); t.ctx.stroke(); t.ctx.restore();
+    });
+    sfx.no(); say(q.t===0 ? "لَا تَنْسَيِ الْهَمْزَة" : "لَا تَنْسَيِ النِّقَاط");
   } else if(t.strokes>=6 && coverage<0.6){
     say("لِنُحَاوِلْ مِنْ جَدِيد"); setTimeout(()=>t.reset&&t.reset(),700); t.strokes=0;
   } else if(outside>=0.35 && t.strokes>=2){
