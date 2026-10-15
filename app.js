@@ -24,9 +24,9 @@ const GROUPS = [
 const FAMILIES = [[1,2,3,24,27],[4,5,6],[7,8],[9,10,26],[11,12],[13,14],[15,16],[17,18],[19,20],[21,22],[0],[23],[25]];
 
 const GIRLS = [
- {id:"sophie",ar:"صوفي",en:"Sophie",color:"#E0407B",specials:["♟️","👑","🧠","🏆","♞"]},
- {id:"olivia",ar:"أوليفيا",en:"Olivia",color:"#2E9E4F",specials:["🩺","🎹","💃","🩰","🎀"]},
- {id:"julia",ar:"جوليا",en:"Julia",color:"#7B5BD6",specials:["📚","✏️","🍎","🥁","🎓"]}
+ {id:"sophie",ar:"صوفي",say:"صُوفِي",en:"Sophie",color:"#E0407B",specials:["♟️","👑","🧠","🏆","♞"]},
+ {id:"olivia",ar:"أوليفيا",say:"أُولِيفِيَا",en:"Olivia",color:"#2E9E4F",specials:["🩺","🎹","💃","🩰","🎀"]},
+ {id:"julia",ar:"جوليا",say:"جُولِيَا",en:"Julia",color:"#7B5BD6",specials:["📚","✏️","🍎","🥁","🎓"]}
 ];
 const G = id => GIRLS.find(g=>g.id===id);
 
@@ -243,17 +243,20 @@ function houseSVG(k){
 }
 
 function jarSVG(){
-  const sh=share(), total=sh*GIRLS.length, cols=5, rows=Math.ceil(total/cols), sp=28, r=11.5;
+  // The jar keeps roughly the same size; balls get smaller as the daily share grows (up to 24 per girl = 72 balls).
+  const sh=share(), total=sh*GIRLS.length;
+  const cols=Math.max(5,Math.ceil(Math.sqrt(total/1.3))), rows=Math.ceil(total/cols);
+  const sp=Math.min(28,150/cols), r=sp*0.41, jig=sp*0.14;
   const filled=[]; for(let i=0;i<sh;i++) GIRLS.forEach(g=>{ if(jarCount(g.id)>i) filled.push(g.color); });
-  const W=cols*sp+30, Hb=rows*sp+22, H=Hb+40;
+  const W=cols*sp+30, H=rows*sp+62;
   let s='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" aria-label="جرة النجوم">';
   s+='<rect x="'+(W/2-36)+'" y="2" width="72" height="16" rx="6" fill="#1F5FA8"/>';
   s+='<path d="M'+(W/2-30)+' 18 L'+(W/2-30)+' 30 Q8 34 8 60 L8 '+(H-14)+' Q8 '+(H-2)+' 22 '+(H-2)+' L'+(W-22)+' '+(H-2)+' Q'+(W-8)+' '+(H-2)+' '+(W-8)+' '+(H-14)+' L'+(W-8)+' 60 Q'+(W-8)+' 34 '+(W/2+30)+' 30 L'+(W/2+30)+' 18 Z" fill="#EAF6FB" stroke="#9CC3D6" stroke-width="3"/>';
   for(let n=0;n<total;n++){
     const row=Math.floor(n/cols), col=n%cols;
-    const cx=15+sp/2+col*sp+(row%2?4:-4), cy=H-14-r-row*sp;
-    s+= n<filled.length ? '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+filled[n]+'"/><circle cx="'+(cx-3.5)+'" cy="'+(cy-3.5)+'" r="3" fill="#fff" opacity=".55"/>'
-      : '<circle cx="'+cx+'" cy="'+cy+'" r="'+(r-1)+'" fill="none" stroke="#C4DCE7" stroke-width="2" stroke-dasharray="3 3"/>';
+    const cx=15+sp/2+col*sp+(row%2?jig:-jig), cy=H-14-r-row*sp;
+    s+= n<filled.length ? '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+filled[n]+'"/><circle cx="'+(cx-r*0.3)+'" cy="'+(cy-r*0.3)+'" r="'+(r*0.26)+'" fill="#fff" opacity=".55"/>'
+      : '<circle cx="'+cx+'" cy="'+cy+'" r="'+(r-1)+'" fill="none" stroke="#C4DCE7" stroke-width="1.6" stroke-dasharray="3 3"/>';
   }
   return s+'</svg>';
 }
@@ -629,7 +632,7 @@ function parentHTML(){
   s+='<h4>Letters</h4>';
   GIRLS.forEach(g=>{ const k=kid(g.id); s+='<div style="margin-top:10px"><b style="color:'+g.color+'">'+g.en+'</b><div class="lgrid">'+L.map(l=>{ const m=k.mastery[l.i]||0; const c=m>=5?'m5':m>=3?'m3':m>=1?'m1':''; return '<span class="'+c+'" title="'+m+'/5">'+l.ch+'</span>'; }).join("")+'</div></div>'; });
   s+='<div class="legend"><span><i style="background:#EEE7D8"></i>not started</span><span><i style="background:#FBE7B0"></i>learning</span><span><i style="background:#F2C94C"></i>getting there</span><span><i style="background:#7CC48C"></i>mastered</span></div>';
-  s+='<h4>Settings</h4><table><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
+  s+='<h4>Settings</h4><table><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8,16,24].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
    + '<tr><td>Daily reward (shown to the girls)</td><td><input type="text" id="rw" value="'+esc(S.settings.reward)+'"></td></tr>'
    + '<tr><td>Weekly bonus</td><td><input type="text" id="wrw" value="'+esc(S.settings.weekReward)+'"></td></tr>'
    + '<tr><td></td><td><button class="btn small" data-act="savesettings">Save rewards</button> <button class="btn small ghost" data-act="changepin">Change PIN</button></td></tr></table>';
@@ -650,7 +653,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b) return;
   const a=b.dataset.act; sfx.tap();
   switch(a){
-    case "pickgirl": me=b.dataset.id; lsSet("bh_girl",me); say("أَهْلًا "+G(me).ar); ensureSpecial(); go("home"); setTimeout(checkCelebrate,400); break;
+    case "pickgirl": me=b.dataset.id; lsSet("bh_girl",me); say("أَهْلًا يَا "+G(me).say); ensureSpecial(); go("home"); setTimeout(checkCelebrate,400); break;
     case "switch": go("pick"); break;
     case "home": round=null; go("home"); break;
     case "stickers": go("stickers"); break;
