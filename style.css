@@ -160,6 +160,20 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-inline-end:4px}
 
+/* Sticker reveal */
+.stkreveal{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:520px;text-align:center}
+.stkreveal .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,#FFF1BF 0 10deg,transparent 10deg 20deg);animation:spin 14s linear infinite;z-index:0}
+.stkreveal h3,.stkreveal .bigsticker,.stkreveal .stklabel,.stkreveal .row{position:relative;z-index:1}
+.stkreveal h3{justify-content:center;font-size:32px;margin:0}
+.bigsticker{font-size:clamp(120px,24vh,190px);line-height:1.15;animation:stkIn .9s cubic-bezier(.2,1.5,.4,1) both,bob 2.2s ease-in-out .9s infinite;filter:drop-shadow(0 10px 0 rgba(0,0,0,.12))}
+.stklabel{font-family:var(--f-letter);font-size:42px;font-weight:700;margin-bottom:6px}
+@keyframes stkIn{0%{transform:scale(0) rotate(-200deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes bob{50%{transform:translateY(-10px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.newdot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--bad);margin-inline-start:2px}
+.stk div.fresh{background:#FFF3C9;box-shadow:0 0 0 3px var(--gold);animation:pulse 1.1s ease-in-out 4}
+@keyframes pulse{50%{transform:scale(1.1)}}
+
 @media (max-width:780px){
   body{overflow:auto}
   .home{grid-template-columns:1fr}

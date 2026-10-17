@@ -288,7 +288,7 @@ function topBar(){
   const g=G(me), k=kid(me);
   return '<div class="top"><button class="who" data-act="switch" aria-label="change player">'+face(me,48)+'<b style="color:'+g.color+'">'+g.ar+'</b></button>'
    + '<span class="pill"><span class="star">★</span>'+k.stars+'</span>'
-   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length)+'</button>'
+   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length)+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
    + '<span class="spacer"></span><button class="parentbtn" data-act="parent">🔒 Parents</button></div>';
 }
 
@@ -313,10 +313,11 @@ function homeHTML(){
 
 function stickersHTML(){
   const k=kid(me), g=G(me);
-  const specials=Object.keys(k.specials).sort().map(d=>'<div>'+k.specials[d]+'<small>'+d.slice(5)+'</small></div>').join("");
+  const fresh=unseen();
+  const specials=Object.keys(k.specials).sort().map(d=>'<div'+(fresh.includes("s"+d)?' class="fresh"':'')+'>'+k.specials[d]+'<small>'+d.slice(5)+'</small></div>').join("");
   return '<div class="screen">'+topBar()+'<div class="scroll" style="flex:1;padding-bottom:16px"><div class="panel">'
    + '<h2 style="margin:0 0 10px;display:flex;align-items:center;gap:10px">📒 ملصقات '+g.ar+'<button class="btn small ghost" style="margin-inline-start:auto" data-act="home">🏠</button></h2>'
-   + '<div class="stk">'+L.map(l=>k.stickers.includes(l.i)?'<div>'+l.pic+'<small>'+l.word+'</small></div>':'<div class="no">'+l.ch+'</div>').join("")+'</div>'
+   + '<div class="stk">'+L.map(l=>k.stickers.includes(l.i)?'<div'+(fresh.includes("l"+l.i)?' class="fresh"':'')+'>'+l.pic+'<small>'+l.word+'</small></div>':'<div class="no">'+l.ch+'</div>').join("")+'</div>'
    + (specials?'<h2 style="margin:16px 0 10px">⭐ ملصقات الفريق</h2><div class="stk">'+specials+'</div>':'')
    + '</div></div></div>';
 }
@@ -377,9 +378,10 @@ function renderOverlay(){
   else if(overlay.type==="letter") html=letterSheet(overlay.i);
   else if(overlay.type==="pin") html=pinSheet();
   else if(overlay.type==="end") html=endSheet();
+  else if(overlay.type==="sticker") html=stickerSheet();
   else if(overlay.type==="msg") html='<div class="sheet center endbox"><div style="font-size:80px">'+overlay.icon+'</div><h3>'+esc(overlay.text)+'</h3><button class="btn" data-act="close">👍</button></div>';
   el=document.createElement("div"); el.className="veil"; el.id="veil"; el.innerHTML=html;
-  el.addEventListener("click",e=>{ if(e.target===el && overlay && overlay.type!=="end"){ overlay=null; renderOverlay(); } });
+  el.addEventListener("click",e=>{ if(e.target===el && overlay && overlay.type!=="end" && overlay.type!=="sticker"){ overlay=null; renderOverlay(); } });
   document.body.appendChild(el);
 }
 
@@ -603,13 +605,21 @@ function endRound(){
     const id=today()+"_"+me, cur=S.jar[id]||{date:today(),girl:me,n:0,stars:0};
     saveDoc("jar",id,{date:today(),girl:me,n:(cur.n||0)+1,stars:(cur.stars||0)+correct});
   }
-  if(dayFull() && !k.specials[today()]){ const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]}); }
+  let gotSpecial=false;
+  if(dayFull() && !k.specials[today()]){ const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]}); gotSpecial=true; }
   saveDoc("kids",me,k);
   endInfo={correct,total:r.qs.length,pass,practice:r.practice,newStickers,unlockedRoom,justFull:!wasFull&&dayFull()};
-  overlay={type:"end"}; renderOverlay();
-  if(endInfo.justFull){ sfx.fan(); confetti(); lsSet("bh_cele_"+today(),1); setTimeout(()=>say("اِمْتَلَأَتِ الْجَرَّة! أَحْسَنْتُنَّ"),300); }
-  else if(unlockedRoom){ sfx.fan(); setTimeout(()=>say("فَتَحْتِ غُرْفَةً جَدِيدَة!"),300); }
-  else if(pass){ setTimeout(()=>say(rnd(PRAISE)),200); }
+  const reveals=newStickers.map(i=>({pic:L[i].pic,label:L[i].word,say:"مُلْصَقٌ جَدِيد! "+L[i].word}));
+  if(gotSpecial) reveals.push({pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"});
+  markUnseen(newStickers.map(i=>"l"+i).concat(gotSpecial?["s"+today()]:[]));
+  if(reveals.length){ showStickers(reveals,false); return; }
+  overlay={type:"end"}; renderOverlay(); endSounds();
+}
+function endSounds(){
+  const e=endInfo;
+  if(e.justFull){ sfx.fan(); confetti(); lsSet("bh_cele_"+today(),1); setTimeout(()=>say("اِمْتَلَأَتِ الْجَرَّة! أَحْسَنْتُنَّ"),300); }
+  else if(e.unlockedRoom){ sfx.fan(); setTimeout(()=>say("فَتَحْتِ غُرْفَةً جَدِيدَة!"),300); }
+  else if(e.pass){ setTimeout(()=>say(rnd(PRAISE)),200); }
   else setTimeout(()=>say("قَرِيبًا! حَاوِلِي مَرَّةً أُخْرَى"),200);
 }
 function endSheet(){
@@ -632,11 +642,28 @@ function checkCelebrate(){
   if(view.name!=="home" || !dayFull() || lsGet("bh_cele_"+today(),0)) return;
   lsSet("bh_cele_"+today(),1); sfx.fan(); confetti(); toast("🎉 امتلأت الجرّة!");
 }
+/* Sticker reveal: a full-screen moment for every new sticker */
+function unseen(){ return lsGet("bh_unseen_"+me,[]); }
+function markUnseen(ids){ if(ids.length) lsSet("bh_unseen_"+me, unseen().concat(ids)); }
+function seenAll(){ lsSet("bh_unseen_"+me,[]); document.querySelectorAll(".newdot").forEach(e=>e.remove()); }
+function showStickers(list,thenHome){ overlay={type:"sticker",list,idx:0,thenHome}; renderOverlay(); celebrateSticker(list[0]); }
+function celebrateSticker(it){ sfx.fan(); confetti(); setTimeout(()=>say(it.say),500); }
+function stickerSheet(){
+  const it=overlay.list[overlay.idx], last=overlay.idx===overlay.list.length-1;
+  return '<div class="sheet stkreveal"><div class="rays"></div><h3>⭐ ملصق جديد! ⭐</h3><div class="bigsticker">'+it.pic+'</div><div class="stklabel">'+esc(it.label)+'</div>'
+    + '<div class="row">'+(last?'<button class="btn gold" data-act="stknext">رائع! 🎉</button><button class="btn ghost" data-act="stkbook">📒 ملصقاتي</button>':'<button class="btn gold" data-act="stknext">التالي ▶</button>')+'</div></div>';
+}
+function stickerNext(){
+  if(overlay.idx<overlay.list.length-1){ overlay.idx++; renderOverlay(); celebrateSticker(overlay.list[overlay.idx]); return; }
+  if(overlay.thenHome){ overlay=null; renderOverlay(); return; }
+  overlay={type:"end"}; renderOverlay(); endSounds();
+}
 function ensureSpecial(){
-  if(!me || !dayFull()) return;
-  const k=kid(me); if(k.specials[today()]) return;
+  if(!me || !dayFull()) return null;
+  const k=kid(me); if(k.specials[today()]) return null;
   const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]});
-  saveDoc("kids",me,k);
+  saveDoc("kids",me,k); markUnseen(["s"+today()]);
+  return {pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"};
 }
 
 /* ---------- Parent area ---------- */
@@ -680,10 +707,12 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b) return;
   const a=b.dataset.act; sfx.tap();
   switch(a){
-    case "pickgirl": me=b.dataset.id; lsSet("bh_girl",me); say("أَهْلًا يَا "+G(me).say); ensureSpecial(); go("home"); setTimeout(checkCelebrate,400); break;
+    case "pickgirl": me=b.dataset.id; lsSet("bh_girl",me); say("أَهْلًا يَا "+G(me).say); { const sp=ensureSpecial(); go("home"); if(sp) setTimeout(()=>showStickers([sp],true),900); else setTimeout(checkCelebrate,400); } break;
     case "switch": go("pick"); break;
     case "home": round=null; go("home"); break;
-    case "stickers": go("stickers"); break;
+    case "stickers": go("stickers"); seenAll(); break;
+    case "stknext": stickerNext(); break;
+    case "stkbook": overlay=null; round=null; go("stickers"); seenAll(); break;
     case "room": { const gi=+b.dataset.g; overlay={type:"room",g:gi}; renderOverlay(); const k=kid(me); say(gi<k.unlocked?GROUPS[gi].name:"هَذِهِ الْغُرْفَةُ مُقْفَلَة"); break; }
     case "letter": { const i=+b.dataset.i; overlay={type:"letter",i}; renderOverlay(); say(L[i].name+"، "+L[i].word); break; }
     case "sayletter": { const i=+b.dataset.i; say(L[i].name+"، "+L[i].word); break; }
