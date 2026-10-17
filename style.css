@@ -160,6 +160,25 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-inline-end:4px}
 
+/* Level tabs and reading games */
+.lvtabs{display:flex;gap:6px;margin:2px 4px 6px}
+.lvtabs button{flex:1;padding:8px 10px;border-radius:999px;background:#F1EADB;font-weight:800;font-size:18px}
+.lvtabs button.on{background:var(--blue);color:#fff}
+.game.off{opacity:.55}
+.bigword{font-family:var(--f-letter);font-size:clamp(60px,12vh,110px);font-weight:700;line-height:1.5;background:var(--card);border-radius:28px;padding:0 36px;box-shadow:0 6px 0 var(--line);min-width:160px;text-align:center}
+.bigword.build{min-width:200px}
+.slotsleft{color:#CFC4AE;letter-spacing:6px;font-size:.5em;vertical-align:middle;margin-inline-start:8px}
+.opt.optw{width:auto;min-width:clamp(130px,20vw,190px);aspect-ratio:auto;padding:16px 22px;font-size:clamp(40px,6vw,60px);line-height:1.5}
+.speak.small{width:52px;height:52px;font-size:24px}
+.tiles{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;direction:rtl}
+.tile{width:84px;height:84px;border-radius:20px;background:var(--card);font-family:var(--f-letter);font-size:52px;font-weight:700;box-shadow:0 6px 0 var(--line);line-height:1}
+.tile.used{visibility:hidden}
+.tile.wrong{background:#F3E4E1;animation:shake .35s}
+.mic{width:110px;height:110px;border-radius:50%;background:var(--bad);color:#fff;font-size:52px;box-shadow:0 7px 0 #A8402F;display:grid;place-items:center}
+.mic.on{animation:micpulse 1s ease-in-out infinite;background:#E8433A}
+@keyframes micpulse{50%{box-shadow:0 0 0 18px rgba(224,97,79,.25),0 7px 0 #A8402F}}
+.micstat{font-weight:800;font-size:22px;min-height:1.4em;text-align:center}
+
 /* Sticker reveal */
 .stkreveal{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:520px;text-align:center}
 .stkreveal .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,#FFF1BF 0 10deg,transparent 10deg 20deg);animation:spin 14s linear infinite;z-index:0}

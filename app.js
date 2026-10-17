@@ -34,7 +34,13 @@ const GAMES = {
  hear:{ic:"🔊",label:"اسمعي",say:"اِسْمَعِي وَاخْتَارِي الْحَرْف",title:"اسمعي واختاري"},
  pic:{ic:"🖼️",label:"صورة",say:"بِأَيِّ حَرْفٍ تَبْدَأُ الْكَلِمَة؟",title:"بأيّ حرف تبدأ؟"},
  trace:{ic:"✍️",label:"ارسمي",say:"اُرْسُمِي الْحَرْفَ بِإِصْبَعِكِ",title:"ارسمي الحرف"},
- forms:{ic:"🔤",label:"أشكال",say:"مَا هَذَا الْحَرْف؟",title:"ما هذا الحرف؟"}
+ forms:{ic:"🔤",label:"أشكال",say:"مَا هَذَا الْحَرْف؟",title:"ما هذا الحرف؟"},
+ syl:{ic:"✨",label:"الحركات",say:"اِسْمَعِي الصَّوْتَ وَاخْتَارِي",title:"اسمعي الصوت"},
+ long:{ic:"〰️",label:"المدود",say:"قَصِيرٌ أَمْ طَوِيل؟ اِسْمَعِي وَاخْتَارِي",title:"قصير أم طويل؟"},
+ wpic:{ic:"🖼️",label:"اقرئي وصِلي",say:"اِقْرَئِي الْكَلِمَةَ وَاخْتَارِي الصُّورَة",title:"اقرئي واختاري الصورة"},
+ whear:{ic:"👂",label:"أيّ كلمة؟",say:"اِسْمَعِي وَاخْتَارِي الْكَلِمَة",title:"اسمعي واختاري الكلمة"},
+ wbuild:{ic:"🧩",label:"ركّبي",say:"رَكِّبِي الْكَلِمَة",title:"ركّبي الكلمة"},
+ wread:{ic:"🎤",label:"اقرئي بصوتك",say:"اِقْرَئِي الْكَلِمَةَ بِصَوْتٍ عَالٍ",title:"اقرئي بصوتك"}
 };
 const ROTATION = ["hear","pic","trace","forms"];
 const PRAISE = ["أَحْسَنْتِ!","مُمْتَازَة!","رَائِعَة!","بْرَافُو!"];
@@ -288,7 +294,7 @@ function topBar(){
   const g=G(me), k=kid(me);
   return '<div class="top"><button class="who" data-act="switch" aria-label="change player">'+face(me,48)+'<b style="color:'+g.color+'">'+g.ar+'</b></button>'
    + '<span class="pill"><span class="star">★</span>'+k.stars+'</span>'
-   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length)+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
+   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length+l2(k).wst.length)+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
    + '<span class="spacer"></span><button class="parentbtn" data-act="parent">🔒 Parents</button></div>';
 }
 
@@ -301,11 +307,15 @@ function homeHTML(){
   let week='<div class="week">'+wk.map((d,i)=>'<span class="'+(dayFull(d)?'full ':'')+(d===today()?'today':'')+'">'+WEEK_AR[i]+'</span>').join("")+'</div>'
     + '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:700"><span style="font-size:24px">🎬</span><span style="flex:1">'+esc(S.settings.weekReward)+' ('+Math.min(wf,5)+'/5)</span>'
     + (wred?'<b style="color:var(--good)">✓</b>':(wf>=5?'<button class="btn small gold" data-act="redeem" data-key="week_'+wk[0]+'">🔓</button>':''))+'</div>';
-  let games='<div class="games">'+ROTATION.map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>';
+  const lv = (lsGet("bh_level_"+me,1)===2 && l2Open(k)) ? 2 : 1;
+  const tabs='<div class="lvtabs"><button data-act="level" data-l="1" class="'+(lv===1?'on':'')+'">🏠 الحروف</button><button data-act="level" data-l="2" class="'+(lv===2?'on':'')+'">📖 القراءة'+(l2Open(k)?'':' 🔒')+'</button></div>';
+  let games = lv===1
+    ? '<div class="games">'+ROTATION.map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>'
+    : '<div class="games">'+STAGES.map((st,i)=>{ const ok=stageState(k,i)==="open"; const g=GAMES[st.type==="words"?"wpic":st.type]; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?(st.type==="words"?"📖":g.ic):"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>';
   return '<div class="screen">'+topBar()+'<div class="home">'
-   + '<div class="house-wrap"><h2>بيت الحروف</h2>'+houseSVG(k)+'</div>'
+   + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):pathSVG(k))+'</div>'
    + '<div class="side">'
-   +   '<div class="panel"><button class="btn play" data-act="play" data-type="auto">▶ العبي</button>'+games+'</div>'
+   +   '<div class="panel"><button class="btn play" data-act="play" data-type="'+(lv===1?'auto':'auto2')+'">▶ العبي</button>'+games+'</div>'
    +   '<div class="panel"><h2 style="margin:0 0 8px">جرّة النجوم</h2><div class="jarbox">'+jarSVG()+'<div class="jarstat">'+jarRows+'</div></div>'+ticket+'</div>'
    +   '<div class="panel"><h2 style="margin:0">هذا الأسبوع</h2>'+week+'</div>'
    + '</div></div></div>';
@@ -318,6 +328,7 @@ function stickersHTML(){
   return '<div class="screen">'+topBar()+'<div class="scroll" style="flex:1;padding-bottom:16px"><div class="panel">'
    + '<h2 style="margin:0 0 10px;display:flex;align-items:center;gap:10px">📒 ملصقات '+g.ar+'<button class="btn small ghost" style="margin-inline-start:auto" data-act="home">🏠</button></h2>'
    + '<div class="stk">'+L.map(l=>k.stickers.includes(l.i)?'<div'+(fresh.includes("l"+l.i)?' class="fresh"':'')+'>'+l.pic+'<small>'+l.word+'</small></div>':'<div class="no">'+l.ch+'</div>').join("")+'</div>'
+   + (l2(k).wst.length?'<h2 style="margin:16px 0 10px">📖 كلمات قرأتِها</h2><div class="stk">'+l2(k).wst.map(w=>'<div'+(fresh.includes("w"+w)?' class="fresh"':'')+'>'+picHTML(WORDS[w].pic,38)+'<small>'+WORDS[w].w+'</small></div>').join("")+'</div>':'')
    + (specials?'<h2 style="margin:16px 0 10px">⭐ ملصقات الفريق</h2><div class="stk">'+specials+'</div>':'')
    + '</div></div></div>';
 }
@@ -409,6 +420,7 @@ function options(k,target){
   return shuffle(opts);
 }
 function makeRound(type,only){
+  if(L2TYPES.includes(type)) return makeRound2(type);
   const k=kid(me);
   if(type==="auto"){ type=ROTATION[k.rot%ROTATION.length]; }
   const n = type==="trace" ? (only!=null?1:2) : 4;
@@ -431,12 +443,14 @@ function startRound(type,only){
 }
 function promptCurrent(){
   if(!round || view.name!=="game") return;
+  if(STAGE_OF[round.type]!=null){ promptCurrent2(); return; }
   const q=round.qs[round.cur], l=L[q.t];
   if(round.type==="hear") say(l.name);
   else if(round.type==="pic") say(l.word);
   else if(round.type==="trace") say(l.name);
 }
 function gameHTML(){
+  if(STAGE_OF[round.type]!=null) return gameHTML2();
   const r=round, q=r.qs[r.cur], l=L[q.t], gm=GAMES[r.type];
   const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
   let body='';
@@ -587,7 +601,8 @@ let endInfo=null;
 function endRound(){
   const r=round, k=pendingKid||kid(me); pendingKid=null;
   const correct=r.qs.filter(q=>q.ok).length;
-  const pass = r.type==="trace" ? true : correct>=3;
+  const need = r.type==="trace" ? 0 : r.type==="wbuild" ? 1 : r.type==="wread" ? 2 : 3;
+  const pass = correct>=need;
   const msgs=[];
   k.stars=(k.stars||0)+correct;
   if(!r.practice) k.rot=(k.rot||0)+1;
@@ -600,6 +615,13 @@ function endRound(){
     const newest=GROUPS[k.unlocked-1].letters;
     if(newest.filter(i=>(k.mastery[i]||0)>=3).length>=3){ k.unlocked++; unlockedRoom=GROUPS[k.unlocked-1].name; }
   }
+  // reading level: new path stations and word stickers
+  let unlockedStage=null; const newWords=[];
+  if(r.stageBefore!=null){
+    const after=stageCount(k); if(after>r.stageBefore) unlockedStage=STAGES[after-1].name;
+    const l=l2(k); Object.keys(l.words).forEach(w=>{ w=+w; if(l.words[w]>=3 && !l.wst.includes(w)) newWords.push(w); });
+    if(newWords.length) k.l2=Object.assign({},l,{wst:l.wst.concat(newWords)});
+  }
   const wasFull=dayFull();
   if(pass && !r.practice){
     const id=today()+"_"+me, cur=S.jar[id]||{date:today(),girl:me,n:0,stars:0};
@@ -608,10 +630,11 @@ function endRound(){
   let gotSpecial=false;
   if(dayFull() && !k.specials[today()]){ const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]}); gotSpecial=true; }
   saveDoc("kids",me,k);
-  endInfo={correct,total:r.qs.length,pass,practice:r.practice,newStickers,unlockedRoom,justFull:!wasFull&&dayFull()};
+  endInfo={correct,total:r.qs.length,pass,need,practice:r.practice,newStickers,unlockedRoom,unlockedStage,justFull:!wasFull&&dayFull()};
   const reveals=newStickers.map(i=>({pic:L[i].pic,label:L[i].word,say:"مُلْصَقٌ جَدِيد! "+L[i].word}));
+  newWords.forEach(w=>reveals.push({pic:WORDS[w].pic.startsWith("face:")?face(WORDS[w].pic.slice(5),170):WORDS[w].pic,label:WORDS[w].w,say:"مُلْصَقٌ جَدِيد! "+WORDS[w].w}));
   if(gotSpecial) reveals.push({pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"});
-  markUnseen(newStickers.map(i=>"l"+i).concat(gotSpecial?["s"+today()]:[]));
+  markUnseen(newStickers.map(i=>"l"+i).concat(newWords.map(w=>"w"+w)).concat(gotSpecial?["s"+today()]:[]));
   if(reveals.length){ showStickers(reveals,false); return; }
   overlay={type:"end"}; renderOverlay(); endSounds();
 }
@@ -619,6 +642,7 @@ function endSounds(){
   const e=endInfo;
   if(e.justFull){ sfx.fan(); confetti(); lsSet("bh_cele_"+today(),1); setTimeout(()=>say("اِمْتَلَأَتِ الْجَرَّة! أَحْسَنْتُنَّ"),300); }
   else if(e.unlockedRoom){ sfx.fan(); setTimeout(()=>say("فَتَحْتِ غُرْفَةً جَدِيدَة!"),300); }
+  else if(e.unlockedStage){ sfx.fan(); confetti(); setTimeout(()=>say("فَتَحْتِ مَحَطَّةً جَدِيدَة!"),300); }
   else if(e.pass){ setTimeout(()=>say(rnd(PRAISE)),200); }
   else setTimeout(()=>say("قَرِيبًا! حَاوِلِي مَرَّةً أُخْرَى"),200);
 }
@@ -628,8 +652,9 @@ function endSheet(){
   if(e.practice) s+='<div style="font-size:70px">✍️</div><h3>أحسنتِ!</h3>';
   else {
     s+='<div class="stars">'+[...Array(e.total)].map((_,i)=>'<span class="'+(i<e.correct?'':'off')+'">★</span>').join("")+'</div>';
-    s+= e.pass ? '<h3>أحسنتِ! <span style="color:'+G(me).color+'">+1</span> في الجرّة</h3>' : '<h3>قريبًا! حاولي مرة ثانية</h3><p style="margin:0">تحتاجين 3 نجوم لتضيفي إلى الجرّة</p>';
+    s+= e.pass ? '<h3>أحسنتِ! <span style="color:'+G(me).color+'">+1</span> في الجرّة</h3>' : '<h3>قريبًا! حاولي مرة ثانية</h3><p style="margin:0">تحتاجين '+e.need+' نجوم لتضيفي إلى الجرّة</p>';
   }
+  if(e.unlockedStage) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🔓 محطة جديدة: '+e.unlockedStage+'!</div>';
   if(e.unlockedRoom) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🔓 فتحتِ '+e.unlockedRoom+'!</div>';
   if(e.newStickers.length) s+='<div class="panel" style="background:#F6F0E2;font-size:22px;font-weight:800">ملصق جديد! '+e.newStickers.map(i=>L[i].pic).join(" ")+'</div>';
   if(e.justFull) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🎉 امتلأت الجرّة! 🎟️ '+esc(S.settings.reward)+'</div>';
@@ -666,6 +691,226 @@ function ensureSpecial(){
   return {pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"};
 }
 
+/* ======================= Level 2: reading ======================= */
+const HAR={a:"َ",i:"ِ",u:"ُ"};
+function syl(t,v){
+  if(t===0) return {a:"أَ",i:"إِ",u:"أُ",aa:"آ",ii:"إِي",uu:"أُو"}[v];
+  const c=L[t].ch;
+  return {a:c+HAR.a,i:c+HAR.i,u:c+HAR.u,aa:c+HAR.a+"ا",ii:c+HAR.i+"ي",uu:c+HAR.u+"و"}[v];
+}
+// Simple vowelled words, each with a picture. A word appears once all its letters are open in the house.
+const WORDS=[
+ ["بَاب","🚪"],["دُبّ","🐻"],["أَب","👨"],["أُمّ","👩"],["بَحْر","🌊"],["تَاج","👑"],["دَجَاج","🐔"],["سَحَاب","☁️"],["جَرَس","🔔"],
+ ["بَيْت","🏠"],["بِنْت","👧"],["وَلَد","👦"],["قِطّ","🐈"],["فِيل","🐘"],["نَار","🔥"],["شَمْس","☀️"],["قَمَر","🌙"],["مَوْز","🍌"],
+ ["وَرْد","🌹"],["كَلْب","🐕"],["سَمَك","🐟"],["جَمَل","🐫"],["يَد","✋"],["فَم","👄"],["زَيْت","🫒"],["ثَوْب","👗"],["خُبْز","🍞"],
+ ["لَبَن","🥛"],["عَيْن","👁️"],["نَمِر","🐯"],["دِيك","🐓"],["كُرَة","⚽"],["بَيْض","🥚"],["حُوت","🐋"],["ثَلْج","❄️"],["صَقْر","🦅"],
+ ["طَبْل","🥁"],["شَاي","🍵"],["عَسَل","🍯"],["غَزَال","🦌"],["هَاتِف","📱"],["صُوفِي","face:sophie"],["أُولِيفْيَا","face:olivia"],["جُولْيَا","face:julia"]
+].map(([w,pic],i)=>({i,w,pic}));
+const stripH = s => s.replace(/[ً-ْٰـ]/g,"");
+function letterIdx(ch){ const m={"ا":0,"أ":0,"إ":0,"آ":0,"ة":2,"ى":27}; return ch in m ? m[ch] : L.findIndex(l=>l.ch===ch); }
+WORDS.forEach(o=>{ o.chars=[...stripH(o.w)]; o.letters=[...new Set(o.chars.map(letterIdx))]; });
+function picHTML(p,size){ return p.startsWith("face:") ? face(p.slice(5),size) : '<span style="font-size:'+size+'px;line-height:1">'+p+'</span>'; }
+
+const STAGES=[
+ {type:"syl",  name:"الحركات",     sample:"بَ بِ بُ", need:15},
+ {type:"long", name:"المدود",      sample:"با بو بي", need:15},
+ {type:"words",name:"الكلمات",     sample:"بَاب",     need:20},
+ {type:"wread",name:"اقرئي بصوتك", sample:"🎤",       need:0}
+];
+const L2TYPES=["syl","long","wpic","whear","wbuild","wread","words","auto2"];
+const STAGE_OF={syl:0,long:1,wpic:2,whear:2,wbuild:2,wread:3};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+let micBlocked=false;
+function l2(k){ return Object.assign({pts:[0,0,0,0],words:{},wst:[],open:false},k.l2||{}); }
+function l2Open(k){ return k.unlocked>=3 || l2(k).open; }
+function stageFromPts(p){ let s=1; if(p[0]>=15) s=2; if(s>=2&&p[1]>=15) s=3; if(s>=3&&p[2]>=20) s=4; return s; }
+function stageCount(k){ const l=l2(k); return Math.max(l.stage||1, stageFromPts(l.pts)); } // a station never closes again once opened
+function availWords(k){ const P=new Set(pool(k)); return WORDS.filter(o=>o.letters.every(i=>P.has(i))); }
+function stageState(k,s){ // "open" | "locked" | reason text
+  if(s>=stageCount(k)) return "locked";
+  if(s>=2 && availWords(k).length<4) return "افتحي غرفًا أكثر في بيت الحروف لتظهر الكلمات";
+  if(s===3 && (!SR || micBlocked)) return "الميكروفون غير متاح على هذا الجهاز";
+  return "open";
+}
+function pickWords(k,n,from){
+  const W=from||availWords(k), m=l2(k).words, out=[];
+  for(let t=0;t<n;t++){
+    const w=W.map(o=>(out.includes(o.i)?0.1:1)*(4-Math.min(3,m[o.i]||0)));
+    let r=Math.random()*w.reduce((a,b)=>a+b,0), pick=W[0].i;
+    for(let j=0;j<W.length;j++){ r-=w[j]; if(r<=0){ pick=W[j].i; break; } }
+    out.push(pick);
+  }
+  return out;
+}
+function otherWords(k,target,n){
+  const A=availWords(k).filter(o=>o.i!==target && o.pic!==WORDS[target].pic);
+  const same=shuffle(A.filter(o=>o.chars[0]===WORDS[target].chars[0])), rest=shuffle(A.filter(o=>o.chars[0]!==WORDS[target].chars[0]));
+  return same.concat(rest).slice(0,n).map(o=>o.i);
+}
+function makeRound2(type){
+  const k=kid(me);
+  if(type==="auto2"){
+    const open=STAGES.map((s,i)=>i).filter(i=>stageState(k,i)==="open");
+    const top=open[open.length-1];
+    type=STAGES[(Math.random()<0.6||open.length===1)?top:rnd(open)].type;
+  }
+  if(type==="words") type=rnd(["wpic","whear","wbuild"]);
+  const stage=STAGE_OF[type];
+  let qs=[];
+  if(type==="syl"){
+    qs=pickLetters(k,4).map(t=>{
+      const v=rnd(["a","i","u"]);
+      const opts = Math.random()<0.6 ? ["a","i","u"].map(x=>({html:syl(t,x),ok:x===v})) : options(k,t).map(x=>({html:syl(x,v),ok:x===t}));
+      return {stage,say:syl(t,v),opts:shuffle(opts),tries:0,done:false,ok:false};
+    });
+  } else if(type==="long"){
+    qs=pickLetters(k,4).map(t=>{
+      const v=rnd(["a","i","u"]), o=rnd(["a","i","u"].filter(x=>x!==v));
+      const cands=[{html:syl(t,v),key:"s"},{html:syl(t,v+v),key:"l"},{html:syl(t,o+o),key:"o"}];
+      const target=Math.random()<0.5?"s":"l";
+      return {stage,say:cands.find(c=>c.key===target).html,opts:shuffle(cands.map(c=>({html:c.html,ok:c.key===target}))),tries:0,done:false,ok:false};
+    });
+  } else {
+    const n = type==="wbuild"?2 : type==="wread"?3 : 4;
+    qs=pickWords(k,n).map(w=>{
+      const q={stage,w,tries:0,done:false,ok:false,helped:false};
+      if(type==="wpic") q.opts=shuffle([w].concat(otherWords(k,w,2))).map(x=>({html:picHTML(WORDS[x].pic,64),ok:x===w}));
+      if(type==="whear") q.opts=shuffle([w].concat(otherWords(k,w,2))).map(x=>({html:WORDS[x].w,ok:x===w,word:true}));
+      if(type==="wbuild"){
+        const extra=rnd(pool(k).filter(i=>!WORDS[w].letters.includes(i))); 
+        const chars=WORDS[w].chars.slice();
+        q.tiles=shuffle(chars.map((c,j)=>({c,used:false,id:j})).concat(extra!=null?[{c:extra===0?"ا":L[extra].ch,used:false,id:99}]:[]));
+        q.built=0;
+      }
+      return q;
+    });
+  }
+  return {type,qs,cur:0,practice:false,stageBefore:stageCount(k)};
+}
+function promptCurrent2(){
+  const q=round.qs[round.cur];
+  if(round.type==="syl"||round.type==="long") say(q.say,0.7);
+  else if(round.type==="whear"||round.type==="wbuild") say(WORDS[q.w].w);
+}
+function gameHTML2(){
+  const r=round, q=r.qs[r.cur], gm=GAMES[r.type];
+  const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
+  const speak='<button class="speak" data-act="replay" aria-label="listen again">🔊</button>';
+  let body='';
+  if(r.type==="syl"||r.type==="long"||r.type==="whear"){
+    body='<div class="prompt">'+speak+gm.title+'</div><div class="opts">'+q.opts.map((o,i)=>'<button class="opt'+(o.word?' optw':'')+'" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
+  } else if(r.type==="wpic"){
+    body='<div class="prompt">'+gm.title+'<button class="speak small" data-act="help" aria-label="help">🔊</button></div><div class="bigword">'+WORDS[q.w].w+'</div><div class="opts">'+q.opts.map((o,i)=>'<button class="opt" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
+  } else if(r.type==="wbuild"){
+    const o=WORDS[q.w], built=o.chars.slice(0,q.built).join("");
+    body='<div class="prompt">'+speak+gm.title+'</div><div style="display:flex;align-items:center;gap:18px">'+picHTML(o.pic,96)
+      +'<div class="bigword build">'+(built||'&nbsp;')+'<span class="slotsleft">'+'•'.repeat(o.chars.length-q.built)+'</span></div></div>'
+      +'<div class="tiles">'+q.tiles.map((t,i)=>'<button class="tile'+(t.used?' used':'')+'" data-act="tile" data-o="'+i+'" id="t'+i+'"'+(t.used?' disabled':'')+'>'+t.c+'</button>').join("")+'</div>';
+  } else if(r.type==="wread"){
+    body='<div class="prompt">'+gm.title+'</div><div class="bigword">'+WORDS[q.w].w+'</div>'
+      +'<button class="mic" data-act="mic" id="micbtn" aria-label="microphone">🎤</button><div class="micstat" id="micstat">اضغطي على الميكروفون واقرئي</div><div class="reveal" id="reveal"></div>';
+  }
+  return '<div class="screen"><div class="gtop"><button class="iconbtn" data-act="quit" aria-label="back home">✕</button>'+dots+face(me,52)+'</div><div class="stage">'+body+'</div></div>';
+}
+function bumpL2(q,d){
+  if(!d) return;
+  const k=pendingKid||kid(me), l=l2(k), pts=l.pts.slice();
+  pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
+  const words=Object.assign({},l.words);
+  if(q.w!=null) words[q.w]=Math.max(0,Math.min(3,(words[q.w]||0)+d));
+  k.l2=Object.assign({},l,{pts,words,stage:Math.max(l.stage||1,stageFromPts(pts))}); pendingKid=k;
+}
+function showWordReveal(q){ const rv=$("#reveal"); if(rv && q.w!=null) rv.innerHTML=picHTML(WORDS[q.w].pic,44)+'  '+WORDS[q.w].w; }
+function answer2(i){
+  const q=round.qs[round.cur]; if(q.done) return;
+  const btn=$("#p"+i);
+  if(q.opts[i].ok){
+    q.done=true; q.ok=(q.tries===0 && !q.helped);
+    btn.classList.add("right"); sfx.ok(); bumpL2(q,q.ok?1:0);
+    if(q.w!=null){ showWordReveal(q); setTimeout(()=>say(rnd(PRAISE)+" "+WORDS[q.w].w),250); }
+    else setTimeout(()=>say(rnd(PRAISE)),250);
+    setTimeout(nextQ,1900);
+  } else {
+    if(btn.classList.contains("wrong")) return;
+    q.tries++; btn.classList.add("wrong"); sfx.no();
+    if(q.tries===1) bumpL2(q,-1);
+    setTimeout(()=>{ if(round.type==="wpic") say("حَاوِلِي مَرَّةً أُخْرَى"); else promptCurrent2(); },350);
+  }
+}
+function tile(i){
+  const q=round.qs[round.cur], t=q.tiles[i], o=WORDS[q.w]; if(q.done||t.used) return;
+  if(t.c===o.chars[q.built]){
+    t.used=true; q.built++; sfx.tap();
+    if(q.built===o.chars.length){
+      q.done=true; q.ok=q.tries<=1; bumpL2(q,q.ok?1:0); render(); sfx.ok();
+      setTimeout(()=>say(rnd(PRAISE)+" "+o.w),200); setTimeout(nextQ,2000);
+    } else render();
+  } else {
+    q.tries++; sfx.no(); if(q.tries===2) bumpL2(q,-1);
+    const b=$("#t"+i); if(b){ b.classList.add("wrong"); setTimeout(()=>b.classList.remove("wrong"),400); }
+    if(q.tries>=3) setTimeout(()=>say(o.w),300);
+  }
+}
+/* Read aloud with speech recognition */
+const normAr = s => stripH(s).replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/[^ء-ي\s]/g,"").trim();
+function lev(a,b){ const d=[...Array(b.length+1)].map((_,j)=>j); for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; } } return d[b.length]; }
+function heard(alts,word){
+  const t=normAr(word);
+  return alts.some(a=>{
+    const n=normAr(a); if(n.replace(/\s/g,"")===t) return true;
+    return n.split(/\s+/).some(tok=>{ const x=tok.replace(/^ال/,""); return tok===t||x===t||(t.length>=3&&(lev(tok,t)<=1||lev(x,t)<=1)); });
+  });
+}
+let listening=false;
+function mic(){
+  const q=round.qs[round.cur]; if(q.done||listening||!SR) return;
+  try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){}
+  const btn=$("#micbtn"), st=$("#micstat");
+  const rec=new SR(); rec.lang="ar-AE"; rec.interimResults=false; rec.maxAlternatives=5;
+  let got=false; listening=true; if(btn) btn.classList.add("on"); if(st) st.textContent="أسمعكِ… اقرئي الآن";
+  rec.onresult=e=>{ got=true; const alts=[...e.results[0]].map(a=>a.transcript); readResult(q,alts); };
+  rec.onerror=e=>{ got=true; listening=false; if(btn) btn.classList.remove("on");
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ micBlocked=true; if(st) st.textContent="الميكروفون غير مسموح. اطلبي من بابا أو ماما السماح به."; q.done=true; setTimeout(nextQ,2500); }
+    else if(st) st.textContent= e.error==="no-speech" ? "لم أسمع شيئًا. اضغطي واقرئي بصوت أعلى" : "حاولي مرة أخرى";
+  };
+  rec.onend=()=>{ listening=false; if(btn) btn.classList.remove("on"); if(!got && st) st.textContent="لم أسمع شيئًا. اضغطي واقرئي بصوت أعلى"; };
+  try{ rec.start(); }catch(e){ listening=false; if(btn) btn.classList.remove("on"); }
+}
+function readResult(q,alts){
+  listening=false; const st=$("#micstat"), btn=$("#micbtn"); if(btn) btn.classList.remove("on");
+  const o=WORDS[q.w];
+  if(heard(alts,o.w)){
+    q.done=true; q.ok=q.tries<=1 && !q.helped; bumpL2(q,q.ok?1:0); sfx.ok();
+    if(st) st.textContent="✓"; showWordReveal(q); setTimeout(()=>say(rnd(PRAISE)+" "+o.w),200); setTimeout(nextQ,2200);
+  } else {
+    q.tries++; sfx.no();
+    if(q.tries===1){ bumpL2(q,-1); if(st) st.textContent="قريبًا! حاولي مرة أخرى"; }
+    else if(q.tries===2){ q.helped=true; if(st) st.textContent="اسمعي واقرئي معي"; say(o.w,0.7); }
+    else { q.done=true; q.ok=false; showWordReveal(q); if(st) st.textContent=""; say(o.w,0.7); setTimeout(nextQ,2400); }
+  }
+}
+/* Reading path on the home screen */
+function pathSVG(k){
+  const pos=[[380,286],[262,224],[150,150],[262,72]], l=l2(k);
+  let s='<svg class="house" viewBox="0 0 480 340" preserveAspectRatio="xMidYMid meet">';
+  s+='<rect x="0" y="0" width="480" height="340" rx="16" fill="#DDF0D2"/>';
+  s+='<path d="M470 330 C420 300 400 300 380 286 S300 250 262 224 S170 190 150 150 S180 90 262 72 S360 40 420 40" stroke="#E9D1A2" stroke-width="30" fill="none" stroke-linecap="round"/>';
+  // little house (start) and library (finish)
+  s+='<g transform="translate(410 270)"><rect x="0" y="16" width="56" height="40" fill="#E9D1A2" stroke="#C7A56A" stroke-width="2"/><rect x="-4" y="10" width="64" height="8" fill="#fff"/><path d="M22 56 V40 a6 6 0 0 1 12 0 V56 Z" fill="#4A3226"/></g>';
+  s+='<g transform="translate(372 6)"><rect x="0" y="22" width="96" height="48" rx="4" fill="#fff" stroke="#1F5FA8" stroke-width="3"/><path d="M-6 24 L48 0 L102 24 Z" fill="#1F5FA8"/><text x="48" y="56" text-anchor="middle" font-size="26">📚</text></g>';
+  STAGES.forEach((st,i)=>{
+    const [x,y]=pos[i], state=stageState(k,i), open=state==="open", frac=st.need?Math.min(1,(l.pts[i]||0)/st.need):1;
+    const C=2*Math.PI*40;
+    s+='<g class="room" data-act="'+(open?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'" role="button" aria-label="'+st.name+'">';
+    s+='<circle cx="'+x+'" cy="'+y+'" r="40" fill="'+(open?'#fff':'#C9C3B6')+'" stroke="'+(open?'#F1EADB':'#B1AA9C')+'" stroke-width="8"/>';
+    if(open && st.need) s+='<circle cx="'+x+'" cy="'+y+'" r="40" fill="none" stroke="#F2B82F" stroke-width="8" stroke-dasharray="'+(frac*C)+' '+C+'" transform="rotate(-90 '+x+' '+y+')" stroke-linecap="round"/>';
+    s+= open ? '<text x="'+x+'" y="'+(y+8)+'" text-anchor="middle" font-size="'+(st.sample.length>4?18:24)+'" font-family="Noto Naskh Arabic, serif" font-weight="700" fill="#2A2140">'+st.sample+'</text>'
+             : '<text x="'+x+'" y="'+(y+9)+'" text-anchor="middle" font-size="26">🔒</text>';
+    s+='<text x="'+x+'" y="'+(y+62)+'" text-anchor="middle" font-size="17" font-weight="800" fill="#2A2140" font-family="Baloo Bhaijaan 2, sans-serif">'+st.name+'</text></g>';
+  });
+  return s+'</svg>';
+}
+
 /* ---------- Parent area ---------- */
 function parentHTML(){
   const sh=share(), wk=weekDays();
@@ -686,6 +931,10 @@ function parentHTML(){
   s+='<h4>Letters</h4>';
   GIRLS.forEach(g=>{ const k=kid(g.id); s+='<div style="margin-top:10px"><b style="color:'+g.color+'">'+g.en+'</b><div class="lgrid">'+L.map(l=>{ const m=k.mastery[l.i]||0; const c=m>=5?'m5':m>=3?'m3':m>=1?'m1':''; return '<span class="'+c+'" title="'+m+'/5">'+l.ch+'</span>'; }).join("")+'</div></div>'; });
   s+='<div class="legend"><span><i style="background:#EEE7D8"></i>not started</span><span><i style="background:#FBE7B0"></i>learning</span><span><i style="background:#F2C94C"></i>getting there</span><span><i style="background:#7CC48C"></i>mastered</span></div>';
+  s+='<h4>Reading (level 2)</h4><table><tr><th>Girl</th><th>Status</th><th>Sounds</th><th>Long vowels</th><th>Words</th><th>Words read</th></tr>'
+    + GIRLS.map(g=>{ const k=kid(g.id), l=l2(k); return '<tr><td><b style="color:'+g.color+'">'+g.en+'</b></td><td>'+(l2Open(k)?'Station '+stageCount(k)+' / 4':'Locked (opens at room 3)')+'</td><td>'+Math.min(l.pts[0],15)+' / 15</td><td>'+Math.min(l.pts[1],15)+' / 15</td><td>'+Math.min(l.pts[2],20)+' / 20</td><td>'+l.wst.length+'</td></tr>'; }).join("")+'</table>'
+    + '<p style="margin:6px 0;color:var(--muted)">Reading opens by itself when a girl reaches the third room. Each station opens the next one after enough correct answers. '+(SR?'Read-aloud uses Chrome speech recognition (needs internet; Chrome asks for the microphone once).':'This tablet\'s browser does not support speech recognition, so the read-aloud station stays closed.')+'</p>'
+    + '<button class="btn small ghost" data-act="l2openall">Open reading now for all three</button>';
   s+='<h4>Settings</h4><table><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8,16,24].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
    + '<tr><td>Daily reward (shown to the girls)</td><td><input type="text" id="rw" value="'+esc(S.settings.reward)+'"></td></tr>'
    + '<tr><td>Weekly bonus</td><td><input type="text" id="wrw" value="'+esc(S.settings.weekReward)+'"></td></tr>'
@@ -721,6 +970,17 @@ document.addEventListener("click",e=>{
     case "play": startRound(b.dataset.type); break;
     case "replay": promptCurrent(); break;
     case "answer": answer(+b.dataset.o); break;
+    case "answer2": answer2(+b.dataset.o); break;
+    case "help": { const q=round.qs[round.cur]; if(!q.done){ q.helped=true; say(WORDS[q.w].w); } break; }
+    case "tile": tile(+b.dataset.o); break;
+    case "mic": mic(); break;
+    case "level": { const want=+b.dataset.l, k=kid(me);
+      if(want===2 && !l2Open(k)){ overlay={type:"msg",icon:"📖",text:"افتحي 3 غرف في بيت الحروف لتبدئي القراءة"}; renderOverlay(); say("اِفْتَحِي ثَلَاثَ غُرَفٍ لِتَبْدَئِي الْقِرَاءَة"); break; }
+      lsSet("bh_level_"+me,want); render(); if(want===2) say("هَيَّا نَقْرَأ!"); break; }
+    case "stlock": { const k=kid(me), s=+b.dataset.s, st=stageState(k,s);
+      const text = st==="locked" ? "أكملي المحطة السابقة لفتح "+STAGES[s].name : st;
+      overlay={type:"msg",icon:"🔒",text}; renderOverlay(); break; }
+    case "l2openall": GIRLS.forEach(g=>{ const k=kid(g.id); k.l2=Object.assign({},l2(k),{open:true}); saveDoc("kids",g.id,k); }); toast("Reading level opened"); render(); break;
     case "tclear": if(trace&&!trace.done){ trace.strokes=0; trace.reset(); } break;
     case "quit": round=null; pendingKid=null; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){} go("home"); break;
     case "again": startRound(round.practice?"trace":round.type, round.practice?round.qs[0].t:undefined); break;
