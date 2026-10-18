@@ -65,7 +65,7 @@ function forms(i){ const c=L[i].ch; return L[i].join ? {iso:c,ini:c+"ـ",med:"ـ
 
 /* ---------- State + storage ---------- */
 const defaultKid = () => ({mastery:{},stars:0,unlocked:1,stickers:[],specials:{},rot:0});
-const defaultSettings = () => ({pin:null,share:5,reward:"+10 دقائق تلفزيون",weekReward:"اختيار فيلم الجمعة"});
+const defaultSettings = () => ({pin:null,share:5,perSticker:10,reward:"+10 دقائق تلفزيون",weekReward:"اختيار فيلم الجمعة"});
 const S = { kids:{}, jar:{}, redeem:{}, settings:defaultSettings(), online:false, readOnly:false };
 (function loadCache(){ const c=lsGet("bh_cache",null); if(c){ S.kids=c.kids||{}; S.jar=c.jar||{}; S.redeem=c.redeem||{}; S.settings=Object.assign(defaultSettings(),c.settings||{}); } })();
 function cache(){ lsSet("bh_cache",{kids:S.kids,jar:S.jar,redeem:S.redeem,settings:S.settings}); }
@@ -637,17 +637,17 @@ function endRound(){
     const after=stageCount(k); if(after>r.stageBefore) unlockedStage=STAGES[after-1].name;
     const l=l2(k); Object.keys(l.words).forEach(w=>{ w=+w; if(l.words[w]>=3 && !l.wst.includes(w)) newWords.push(w); });
     if(newWords.length) k.l2=Object.assign({},l,{wst:l.wst.concat(newWords)});
-    const l3=l2(k), earned=l2Earned(l3);
-    for(let n=(l3.ss||0); n<earned; n++) newL2.push(n);
-    if(newL2.length) k.l2=Object.assign({},l3,{ss:earned});
+    const lb=l2(k), per=perSticker(); let cur=curOf(lb), ss=lb.ss||0;
+    while(cur>=per && ss<L2STK.length){ newL2.push(ss); ss++; cur-=per; }
+    if(newL2.length) k.l2=Object.assign({},lb,{ss,cur});
   }
   // sentences level: stations and album stickers
   const newL3=[];
   if(r.level===3){
     const after=stage3Count(k); if(after>r.stage3Before) unlockedStage = after>=4 ? "قصص واقرئي بصوتك" : STAGES3[after-1].name;
-    const l=l3(k), earned=l3Earned(l);
-    for(let n=(l.ss||0); n<earned; n++) newL3.push(n);
-    if(newL3.length) k.l3=Object.assign({},l,{ss:earned});
+    const l=l3(k), per=perSticker(); let cur=curOf(l), ss=l.ss||0;
+    while(cur>=per && ss<L3STK.length){ newL3.push(ss); ss++; cur-=per; }
+    if(newL3.length) k.l3=Object.assign({},l,{ss,cur});
   }
   const wasFull=dayFull();
   if(pass && !r.practice){
@@ -750,14 +750,16 @@ const L2SETS=[
  {name:"الحيوانات",items:["🦄","🐼","🦋","🐰","🐨","🐧","🦔","🐹","🦜","🐞"]}
 ];
 const L2STK=[].concat(...L2SETS.map((s,si)=>s.items.map(e=>({e,set:si}))));
-const PER_STICKER=6;
-function l2Earned(l){ return Math.min(L2STK.length, Math.floor((l.sc||0)/PER_STICKER)); }
+// Correct answers needed per album sticker (set in Parents). "cur" counts progress since the last sticker.
+function perSticker(){ return S.settings.perSticker||10; }
+function curOf(l){ return l.cur!=null ? l.cur : Math.max(0,(l.sc||0)-(l.ss||0)*6); }
+function l2Earned(l){ return l.ss||0; }
+function progressHTML(l){ const per=perSticker(), have=Math.min(curOf(l),per);
+  return '<div class="ns-bar"><i style="width:'+(have/per*100)+'%"></i></div></div><small>'+have+' / '+per+' ⭐</small>'; }
 function nextStickerHTML(k){
   const l=l2(k), got=l2Earned(l);
   if(got>=L2STK.length) return '<div class="nextstk"><span class="ns-pic">🏆</span><b>جمعتِ كل الملصقات!</b></div>';
-  const have=(l.sc||0)%PER_STICKER, nx=L2STK[got];
-  return '<div class="nextstk"><span class="ns-pic mystery">'+nx.e+'</span><div style="flex:1"><b>الملصق القادم</b><div class="ns-dots">'
-    +[...Array(PER_STICKER)].map((_,i)=>'<i class="'+(i<have?'on':'')+'">★</i>').join("")+'</div></div><small>'+(PER_STICKER-have)+' ⭐</small></div>';
+  return '<div class="nextstk"><span class="ns-pic mystery">'+L2STK[got].e+'</span><div style="flex:1"><b>الملصق القادم</b>'+progressHTML(l)+'</div>';
 }
 const STAGES=[
  {type:"syl",  name:"الحركات",     sample:"بَ بِ بُ", need:15},
@@ -866,8 +868,8 @@ function bumpL2(q,d){
   pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
   const words=Object.assign({},l.words);
   if(q.w!=null) words[q.w]=Math.max(0,Math.min(3,(words[q.w]||0)+d));
-  const sc=(l.sc||0)+(d>0?1:0);
-  k.l2=Object.assign({},l,{pts,words,sc,stage:Math.max(l.stage||1,stageFromPts(pts))}); pendingKid=k;
+  const sc=(l.sc||0)+(d>0?1:0), cur=curOf(l)+(d>0?1:0);
+  k.l2=Object.assign({},l,{pts,words,sc,cur,stage:Math.max(l.stage||1,stageFromPts(pts))}); pendingKid=k;
 }
 function showWordReveal(q){ const rv=$("#reveal"); if(rv && q.w!=null) rv.innerHTML=picHTML(WORDS[q.w].pic,44)+'  '+WORDS[q.w].w; }
 function answer2(i){
@@ -1021,13 +1023,11 @@ function stage3State(k,i){
   if(i===3 && (!SR||micBlocked)) return "الميكروفون غير متاح على هذا الجهاز";
   return "open";
 }
-function l3Earned(l){ return Math.min(L3STK.length, Math.floor((l.sc||0)/PER_STICKER)); }
+function l3Earned(l){ return l.ss||0; }
 function nextSticker3HTML(k){
   const l=l3(k), got=l3Earned(l);
   if(got>=L3STK.length) return '<div class="nextstk"><span class="ns-pic">🏆</span><b>جمعتِ كل ملصقات الجمل!</b></div>';
-  const have=(l.sc||0)%PER_STICKER;
-  return '<div class="nextstk"><span class="ns-pic mystery">'+L3STK[got].e+'</span><div style="flex:1"><b>الملصق القادم</b><div class="ns-dots">'
-    +[...Array(PER_STICKER)].map((_,i)=>'<i class="'+(i<have?'on':'')+'">★</i>').join("")+'</div></div><small>'+(PER_STICKER-have)+' ⭐</small></div>';
+  return '<div class="nextstk"><span class="ns-pic mystery">'+L3STK[got].e+'</span><div style="flex:1"><b>الملصق القادم</b>'+progressHTML(l)+'</div>';
 }
 const PARTICLES=["فِي","عَلَى","إِلَى","مِنَ","مَعَ"];
 const ALLWORDS=[...new Set(SENT.flatMap(o=>o.words))];
@@ -1104,7 +1104,7 @@ function bumpL3(q,d){
   if(!d) return;
   const k=pendingKid||kid(me), l=l3(k), pts=l.pts.slice();
   pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
-  k.l3=Object.assign({},l,{pts,sc:(l.sc||0)+(d>0?1:0),stage:Math.max(l.stage||1,stage3FromPts(pts))}); pendingKid=k;
+  k.l3=Object.assign({},l,{pts,sc:(l.sc||0)+(d>0?1:0),cur:curOf(l)+(d>0?1:0),stage:Math.max(l.stage||1,stage3FromPts(pts))}); pendingKid=k;
 }
 function answer3(i){
   const q=round.qs[round.cur]; if(q.done) return;
@@ -1334,7 +1334,7 @@ function parentHTML(){
     + GIRLS.map(g=>{ const k=kid(g.id), l=l3(k); return '<tr><td><b style="color:'+g.color+'">'+g.en+'</b></td><td>'+(l3Open(k)?'Station '+Math.min(stage3Count(k),4)+' / 4':'Locked ('+l2Earned(l2(k))+' / 40 reading stickers)')+'</td><td>'+Math.min(l.pts[0],15)+' / 15</td><td>'+Math.min(l.pts[1],15)+' / 15</td><td>'+Math.min(l.pts[2],15)+' / 15</td><td>'+(l.ss||0)+' / 40</td></tr>'; }).join("")+'</table>'
     + '<p style="margin:6px 0;color:var(--muted)">Sentences open when a girl has collected all 40 reading-album stickers. Stories and read-aloud open after the first three stations.</p>'
     + '<button class="btn small ghost" data-act="l3openall">Open sentences now for all three</button>';
-  s+='<h4>Settings</h4><table><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8,16,24].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
+  s+='<h4>Settings</h4><table><tr><td>Correct answers per album sticker (reading and sentences)</td><td><span class="seg">'+[6,10,15,20].map(n=>'<button data-act="setper" data-n="'+n+'" class="'+(n===perSticker()?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8,16,24].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
    + '<tr><td>Daily reward (shown to the girls)</td><td><input type="text" id="rw" value="'+esc(S.settings.reward)+'"></td></tr>'
    + '<tr><td>Weekly bonus</td><td><input type="text" id="wrw" value="'+esc(S.settings.weekReward)+'"></td></tr>'
    + '<tr><td></td><td><button class="btn small" data-act="savesettings">Save rewards</button> <button class="btn small ghost" data-act="changepin">Change PIN</button></td></tr></table>';
@@ -1412,6 +1412,7 @@ document.addEventListener("click",e=>{
     case "pin": pinPress(b.dataset.d); break;
     case "leaveparent": resetAsk=null; go(me?"home":"pick"); break;
     case "redeemnow": saveDoc("redeem",b.dataset.key,{at:new Date().toISOString(),girl:null}); render(); break;
+    case "setper": saveDoc("settings","family",Object.assign({},S.settings,{perSticker:+b.dataset.n})); render(); break;
     case "setshare": saveDoc("settings","family",Object.assign({},S.settings,{share:+b.dataset.n})); render(); break;
     case "savesettings": { const rw=$("#rw").value.trim()||defaultSettings().reward, wrw=$("#wrw").value.trim()||defaultSettings().weekReward; saveDoc("settings","family",Object.assign({},S.settings,{reward:rw,weekReward:wrw})); toast("Saved"); break; }
     case "famnew": lsSet("bh_family",newFamilyKey()); connect(true); toast("Family started"); break;

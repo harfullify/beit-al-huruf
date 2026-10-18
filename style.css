@@ -204,6 +204,8 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .ns-dots{display:flex;gap:4px;margin-top:2px;direction:rtl}
 .ns-dots i{font-style:normal;color:#DCD2BE;font-size:18px}
 .ns-dots i.on{color:var(--gold)}
+.ns-bar{height:12px;border-radius:6px;background:#E6DCC8;overflow:hidden;margin-top:6px}
+.ns-bar i{display:block;height:100%;background:var(--gold);border-radius:6px}
 .nextstk small{font-weight:800;color:var(--muted)}
 .stk div.no.mystery{font-size:38px}
 
