@@ -40,7 +40,12 @@ const GAMES = {
  wpic:{ic:"🖼️",label:"اقرئي وصِلي",say:"اِقْرَئِي الْكَلِمَةَ وَاخْتَارِي الصُّورَة",title:"اقرئي واختاري الصورة"},
  whear:{ic:"👂",label:"أيّ كلمة؟",say:"اِسْمَعِي وَاخْتَارِي الْكَلِمَة",title:"اسمعي واختاري الكلمة"},
  wbuild:{ic:"🧩",label:"ركّبي",say:"رَكِّبِي الْكَلِمَة",title:"ركّبي الكلمة"},
- wread:{ic:"🎤",label:"اقرئي بصوتك",say:"اِقْرَئِي الْكَلِمَةَ بِصَوْتٍ عَالٍ",title:"اقرئي بصوتك"}
+ wread:{ic:"🎤",label:"اقرئي بصوتك",say:"اِقْرَئِي الْكَلِمَةَ بِصَوْتٍ عَالٍ",title:"اقرئي بصوتك"},
+ s3pic:{ic:"🖼️",label:"جملة وصورة",say:"اِقْرَئِي الْجُمْلَةَ وَاخْتَارِي الصُّورَة",title:"اقرئي الجملة واختاري الصورة"},
+ s3fill:{ic:"✏️",label:"أكملي",say:"أَكْمِلِي الْجُمْلَة",title:"أكملي الجملة"},
+ s3order:{ic:"🧩",label:"رتّبي",say:"رَتِّبِي الْكَلِمَاتِ لِتَصْنَعِي جُمْلَة",title:"رتّبي الجملة"},
+ s3read:{ic:"🎤",label:"اقرئي بصوتك",say:"اِقْرَئِي الْجُمْلَةَ بِصَوْتٍ عَالٍ",title:"اقرئي بصوتك"},
+ s3story:{ic:"📚",label:"قصص",say:"هَيَّا نَقْرَأُ قِصَّة",title:"قصة"}
 };
 const ROTATION = ["hear","pic","trace","forms"];
 const PRAISE = ["أَحْسَنْتِ!","مُمْتَازَة!","رَائِعَة!","بْرَافُو!"];
@@ -298,7 +303,7 @@ function topBar(){
   const g=G(me), k=kid(me);
   return '<div class="top"><button class="who" data-act="switch" aria-label="change player">'+face(me,48)+'<b style="color:'+g.color+'">'+g.ar+'</b></button>'
    + '<span class="pill"><span class="star">★</span>'+k.stars+'</span>'
-   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length+l2(k).wst.length+(l2(k).ss||0))+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
+   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length+l2(k).wst.length+(l2(k).ss||0)+(l3(k).ss||0))+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
    + '<span class="spacer"></span><button class="parentbtn" data-act="parent">🔒 Parents</button></div>';
 }
 
@@ -311,15 +316,17 @@ function homeHTML(){
   let week='<div class="week">'+wk.map((d,i)=>'<span class="'+(dayFull(d)?'full ':'')+(d===today()?'today':'')+'">'+WEEK_AR[i]+'</span>').join("")+'</div>'
     + '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:700"><span style="font-size:24px">🎬</span><span style="flex:1">'+esc(S.settings.weekReward)+' ('+Math.min(wf,5)+'/5)</span>'
     + (wred?'<b style="color:var(--good)">✓</b>':(wf>=5?'<button class="btn small gold" data-act="redeem" data-key="week_'+wk[0]+'">🔓</button>':''))+'</div>';
-  const lv = (lsGet("bh_level_"+me,1)===2 && l2Open(k)) ? 2 : 1;
-  const tabs='<div class="lvtabs"><button data-act="level" data-l="1" class="'+(lv===1?'on':'')+'">🏠 الحروف</button><button data-act="level" data-l="2" class="'+(lv===2?'on':'')+'">📖 القراءة'+(l2Open(k)?'':' 🔒')+'</button></div>';
-  let games = lv===1
+  const want=lsGet("bh_level_"+me,1), lv = (want===3 && l3Open(k)) ? 3 : (want===2 && l2Open(k)) ? 2 : 1;
+  const tabs='<div class="lvtabs"><button data-act="level" data-l="1" class="'+(lv===1?'on':'')+'">🏠 الحروف</button><button data-act="level" data-l="2" class="'+(lv===2?'on':'')+'">📖 القراءة'+(l2Open(k)?'':' 🔒')+'</button><button data-act="level" data-l="3" class="'+(lv===3?'on':'')+'">📚 الجمل'+(l3Open(k)?'':' 🔒')+'</button></div>';
+  let games = lv===3
+    ? '<div class="games g5">'+STAGES3.map((st,i)=>{ const ok=stage3State(k,i)==="open"; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock3')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?GAMES[st.type].ic:"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>'
+    : lv===1
     ? '<div class="games">'+ROTATION.map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>'
     : '<div class="games">'+STAGES.map((st,i)=>{ const ok=stageState(k,i)==="open"; const g=GAMES[st.type==="words"?"wpic":st.type]; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?(st.type==="words"?"📖":g.ic):"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>';
   return '<div class="screen">'+topBar()+'<div class="home">'
-   + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):pathSVG(k))+'</div>'
+   + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):lv===2?pathSVG(k):path3SVG(k))+'</div>'
    + '<div class="side">'
-   +   '<div class="panel"><button class="btn play" data-act="play" data-type="'+(lv===1?'auto':'auto2')+'">▶ العبي</button>'+games+(lv===2?nextStickerHTML(k):'')+'</div>'
+   +   '<div class="panel"><button class="btn play" data-act="play" data-type="'+(lv===1?'auto':lv===2?'auto2':'auto3')+'">▶ العبي</button>'+games+(lv===2?nextStickerHTML(k):lv===3?nextSticker3HTML(k):'')+'</div>'
    +   '<div class="panel"><h2 style="margin:0 0 8px">جرّة النجوم</h2><div class="jarbox">'+jarSVG()+'<div class="jarstat">'+jarRows+'</div></div>'+ticket+'</div>'
    +   '<div class="panel"><h2 style="margin:0">هذا الأسبوع</h2>'+week+'</div>'
    + '</div></div></div>';
@@ -332,6 +339,7 @@ function stickersHTML(){
   return '<div class="screen">'+topBar()+'<div class="scroll" style="flex:1;padding-bottom:16px"><div class="panel">'
    + '<h2 style="margin:0 0 10px;display:flex;align-items:center;gap:10px">📒 ملصقات '+g.ar+'<button class="btn small ghost" style="margin-inline-start:auto" data-act="home">🏠</button></h2>'
    + '<div class="stk">'+L.map(l=>k.stickers.includes(l.i)?'<div'+(fresh.includes("l"+l.i)?' class="fresh"':'')+'>'+l.pic+'<small>'+l.word+'</small></div>':'<div class="no">'+l.ch+'</div>').join("")+'</div>'
+   + (l3(k).sc?L3SETS.map((st,si)=>'<h2 style="margin:16px 0 10px">🌟 ألبوم '+st.name+'</h2><div class="stk">'+st.items.map((e,j)=>{ const n=si*10+j, got=n<(l3(k).ss||0); return got?'<div'+(fresh.includes("y"+n)?' class="fresh"':'')+'>'+e+'</div>':'<div class="no mystery">'+e+'</div>'; }).join("")+'</div>').join(""):'')
    + (l2(k).sc?L2SETS.map((st,si)=>'<h2 style="margin:16px 0 10px">✨ ألبوم '+st.name+'</h2><div class="stk">'+st.items.map((e,j)=>{ const n=si*10+j, got=n<(l2(k).ss||0); return got?'<div'+(fresh.includes("x"+n)?' class="fresh"':'')+'>'+e+'</div>':'<div class="no mystery">'+e+'</div>'; }).join("")+'</div>').join(""):'')
    + (l2(k).wst.length?'<h2 style="margin:16px 0 10px">📖 كلمات قرأتِها</h2><div class="stk">'+l2(k).wst.map(w=>'<div'+(fresh.includes("w"+w)?' class="fresh"':'')+'>'+picHTML(WORDS[w].pic,38)+'<small>'+WORDS[w].w+'</small></div>').join("")+'</div>':'')
    + (specials?'<h2 style="margin:16px 0 10px">⭐ ملصقات الفريق</h2><div class="stk">'+specials+'</div>':'')
@@ -425,6 +433,7 @@ function options(k,target){
   return shuffle(opts);
 }
 function makeRound(type,only){
+  if(L3TYPES.includes(type)) return makeRound3(type);
   if(L2TYPES.includes(type)) return makeRound2(type);
   const k=kid(me);
   if(type==="auto"){ type=ROTATION[k.rot%ROTATION.length]; }
@@ -448,6 +457,7 @@ function startRound(type,only){
 }
 function promptCurrent(){
   if(!round || view.name!=="game") return;
+  if(round.level===3){ promptCurrent3(); return; }
   if(STAGE_OF[round.type]!=null){ promptCurrent2(); return; }
   const q=round.qs[round.cur], l=L[q.t];
   if(round.type==="hear") say(l.name);
@@ -455,6 +465,7 @@ function promptCurrent(){
   else if(round.type==="trace") say(l.name);
 }
 function gameHTML(){
+  if(round.level===3) return gameHTML3();
   if(STAGE_OF[round.type]!=null) return gameHTML2();
   const r=round, q=r.qs[r.cur], l=L[q.t], gm=GAMES[r.type];
   const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
@@ -606,7 +617,7 @@ let endInfo=null;
 function endRound(){
   const r=round, k=pendingKid||kid(me); pendingKid=null;
   const correct=r.qs.filter(q=>q.ok).length;
-  const need = r.type==="trace" ? 0 : r.type==="wbuild" ? 1 : r.type==="wread" ? 2 : 3;
+  const need = r.type==="trace" ? 0 : r.type==="wbuild"||r.type==="s3story" ? 1 : r.type==="wread"||r.type==="s3read"||r.type==="s3order" ? 2 : 3;
   const pass = correct>=need;
   const msgs=[];
   k.stars=(k.stars||0)+correct;
@@ -630,6 +641,14 @@ function endRound(){
     for(let n=(l3.ss||0); n<earned; n++) newL2.push(n);
     if(newL2.length) k.l2=Object.assign({},l3,{ss:earned});
   }
+  // sentences level: stations and album stickers
+  const newL3=[];
+  if(r.level===3){
+    const after=stage3Count(k); if(after>r.stage3Before) unlockedStage = after>=4 ? "قصص واقرئي بصوتك" : STAGES3[after-1].name;
+    const l=l3(k), earned=l3Earned(l);
+    for(let n=(l.ss||0); n<earned; n++) newL3.push(n);
+    if(newL3.length) k.l3=Object.assign({},l,{ss:earned});
+  }
   const wasFull=dayFull();
   if(pass && !r.practice){
     const id=today()+"_"+me, cur=S.jar[id]||{date:today(),girl:me,n:0,stars:0};
@@ -638,12 +657,13 @@ function endRound(){
   let gotSpecial=false;
   if(dayFull() && !k.specials[today()]){ const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]}); gotSpecial=true; }
   saveDoc("kids",me,k);
-  endInfo={l2:r.stageBefore!=null,correct,total:r.qs.length,pass,need,practice:r.practice,newStickers,unlockedRoom,unlockedStage,justFull:!wasFull&&dayFull()};
+  endInfo={l3:r.level===3,l2:r.stageBefore!=null,correct,total:r.qs.length,pass,need,practice:r.practice,newStickers,unlockedRoom,unlockedStage,justFull:!wasFull&&dayFull()};
   const reveals=newStickers.map(i=>({pic:L[i].pic,label:L[i].word,say:"مُلْصَقٌ جَدِيد! "+L[i].word}));
   newWords.forEach(w=>reveals.push({pic:WORDS[w].pic.startsWith("face:")?face(WORDS[w].pic.slice(5),170):WORDS[w].pic,label:WORDS[w].w,say:"مُلْصَقٌ جَدِيد! "+WORDS[w].w}));
+  newL3.forEach(n=>reveals.push({pic:L3STK[n].e,label:"ألبوم "+L3SETS[L3STK[n].set].name,say:"مُلْصَقٌ جَدِيد!"}));
   newL2.forEach(n=>reveals.push({pic:L2STK[n].e,label:"ألبوم "+L2SETS[L2STK[n].set].name,say:"مُلْصَقٌ جَدِيد!"}));
   if(gotSpecial) reveals.push({pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"});
-  markUnseen(newStickers.map(i=>"l"+i).concat(newWords.map(w=>"w"+w)).concat(newL2.map(n=>"x"+n)).concat(gotSpecial?["s"+today()]:[]));
+  markUnseen(newStickers.map(i=>"l"+i).concat(newWords.map(w=>"w"+w)).concat(newL2.map(n=>"x"+n)).concat(newL3.map(n=>"y"+n)).concat(gotSpecial?["s"+today()]:[]));
   if(reveals.length){ showStickers(reveals,false); return; }
   overlay={type:"end"}; renderOverlay(); endSounds();
 }
@@ -667,6 +687,7 @@ function endSheet(){
   if(e.unlockedRoom) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🔓 فتحتِ '+e.unlockedRoom+'!</div>';
   if(e.newStickers.length) s+='<div class="panel" style="background:#F6F0E2;font-size:22px;font-weight:800">ملصق جديد! '+e.newStickers.map(i=>L[i].pic).join(" ")+'</div>';
   if(e.l2) s+=nextStickerHTML(kid(me));
+  if(e.l3) s+=nextSticker3HTML(kid(me));
   if(e.justFull) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🎉 امتلأت الجرّة! 🎟️ '+esc(S.settings.reward)+'</div>';
   else if(!e.practice) s+='<div style="font-weight:700">'+(left?('باقي لكِ '+left+' اليوم'):'✓ أكملتِ حصّتكِ اليوم')+'</div>';
   s+='<div class="row"><button class="btn gold" data-act="again">🔁 مرة أخرى</button><button class="btn ghost" data-act="home">🏠 البيت</button></div></div>';
@@ -939,6 +960,228 @@ function pathSVG(k){
   return s+'</svg>';
 }
 
+/* ======================= Level 3: sentences and stories ======================= */
+// Each sentence: vowelled text and a picture made of emoji and/or the girls' faces (face:id).
+const SENT=[
+ ["القِطُّ نَائِمٌ.","🐈 💤"],["القِطُّ يَأْكُلُ.","🐈 🍽️"],["الكَلْبُ يَجْرِي.","🐕 💨"],["الكَلْبُ نَائِمٌ.","🐕 💤"],
+ ["البَطَّةُ فِي المَاءِ.","🦆 💧"],["السَّمَكَةُ فِي البَحْرِ.","🐟 🌊"],["الشَّمْسُ كَبِيرَةٌ.","☀️"],["القَمَرُ فِي السَّمَاءِ.","🌙 ✨"],
+ ["صُوفِي تَلْعَبُ الشِّطْرَنْجَ.","face:sophie ♟️"],["أُولِيفْيَا تَعْزِفُ البِيَانُو.","face:olivia 🎹"],["جُولْيَا تَقْرَعُ الطَّبْلَ.","face:julia 🥁"],
+ ["البِنْتُ تَأْكُلُ مَوْزَةً.","👧 🍌"],["الوَلَدُ يَأْكُلُ مَوْزَةً.","👦 🍌"],["البِنْتُ تَشْرَبُ الحَلِيبَ.","👧 🥛"],["الوَلَدُ يَشْرَبُ الحَلِيبَ.","👦 🥛"],
+ ["الفِيلُ كَبِيرٌ.","🐘"],["الفَأْرُ صَغِيرٌ.","🐭"],["البَيْتُ جَمِيلٌ.","🏠 ✨"],["الوَرْدَةُ حَمْرَاءُ.","🌹"],["التُّفَّاحَةُ حَمْرَاءُ.","🍎"],
+ ["المَوْزَةُ صَفْرَاءُ.","🍌"],["الطَّائِرَةُ فِي السَّمَاءِ.","✈️ ☁️"],["السَّيَّارَةُ سَرِيعَةٌ.","🚗 💨"],["أُمِّي تَطْبُخُ.","👩 🍳"],
+ ["أَبِي يَقْرَأُ كِتَابًا.","👨 📖"],["المَطَرُ يَنْزِلُ.","🌧️"],["الأَرْنَبُ يَأْكُلُ جَزَرَةً.","🐇 🥕"],["البَقَرَةُ تُعْطِينَا الحَلِيبَ.","🐄 🥛"],
+ ["الطَّائِرُ عَلَى الشَّجَرَةِ.","🐦 🌳"],["نَحْنُ فِي المَدْرَسَةِ.","🏫 🎒"],["جُولْيَا طَوِيلَةٌ.","face:julia 📏"],
+ ["صُوفِي وَأُولِيفْيَا أُخْتَانِ.","face:sophie face:olivia"],["أُولِيفْيَا تُحِبُّ الرَّقْصَ.","face:olivia 💃"]
+].map(([s,pic],i)=>({i,s,pic,words:s.replace(/[.!؟]/g,"").split(" ")}));
+const STORIES=[
+ {title:"يَوْمُ المَدْرَسَةِ",lines:[["اِسْتَيْقَظَتْ صُوفِي صَبَاحًا.","face:sophie ☀️"],["حَمَلَتْ أُولِيفْيَا حَقِيبَتَهَا.","face:olivia 🎒"],["رَكِبَتْ جُولْيَا البَاصَ إِلَى المَدْرَسَةِ.","face:julia 🚌 🏫"]],
+  qs:[["مَنْ رَكِبَتِ البَاصَ؟",[["face:julia","جُولْيَا",1],["face:sophie","صُوفِي",0],["face:olivia","أُولِيفْيَا",0]]],
+      ["إِلَى أَيْنَ ذَهَبَتْ جُولْيَا؟",[["🏫","المَدْرَسَةِ",1],["🌊","البَحْرِ",0],["🏠","البَيْتِ",0]]]]},
+ {title:"فِي الحَدِيقَةِ",lines:[["ذَهَبَتِ البَنَاتُ إِلَى الحَدِيقَةِ.","face:sophie face:olivia face:julia 🌳"],["رَأَتِ البَنَاتُ فَرَاشَةً جَمِيلَةً.","🦋"],["لَعِبَتْ أُولِيفْيَا بِالكُرَةِ.","face:olivia ⚽"]],
+  qs:[["مَاذَا رَأَتِ البَنَاتُ؟",[["🦋","فَرَاشَةً",1],["🐘","فِيلًا",0],["🐟","سَمَكَةً",0]]],
+      ["مَنْ لَعِبَتْ بِالكُرَةِ؟",[["face:olivia","أُولِيفْيَا",1],["face:julia","جُولْيَا",0],["face:sophie","صُوفِي",0]]]]},
+ {title:"الحَفْلَةُ",lines:[["صَنَعَتْ مَامَا كَعْكَةً كَبِيرَةً.","👩 🎂"],["وَضَعَتْ صُوفِي الشُّمُوعَ.","face:sophie 🕯️"],["غَنَّتْ جُولْيَا وَصَفَّقَ الجَمِيعُ.","face:julia 🎤 👏"]],
+  qs:[["مَاذَا صَنَعَتْ مَامَا؟",[["🎂","كَعْكَةً",1],["🍞","خُبْزًا",0],["🍌","مَوْزًا",0]]],
+      ["مَنْ غَنَّتْ؟",[["face:julia","جُولْيَا",1],["face:sophie","صُوفِي",0],["face:olivia","أُولِيفْيَا",0]]]]},
+ {title:"عَلَى البَحْرِ",lines:[["ذَهَبَتِ العَائِلَةُ إِلَى البَحْرِ.","👨‍👩‍👧‍👧 🌊"],["بَنَتْ صُوفِي قَلْعَةً مِنَ الرَّمْلِ.","face:sophie 🏰"],["سَبَحَتْ أُولِيفْيَا مَعَ بَابَا.","face:olivia 🏊‍♀️ 👨"]],
+  qs:[["مَاذَا بَنَتْ صُوفِي؟",[["🏰","قَلْعَةً",1],["🏠","بَيْتًا",0],["🚗","سَيَّارَةً",0]]],
+      ["مَعَ مَنْ سَبَحَتْ أُولِيفْيَا؟",[["👨","بَابَا",1],["👩","مَامَا",0],["face:julia","جُولْيَا",0]]]]},
+ {title:"القِطَّةُ الصَّغِيرَةُ",lines:[["وَجَدَتْ جُولْيَا قِطَّةً صَغِيرَةً.","face:julia 🐈"],["كَانَتِ القِطَّةُ جَائِعَةً.","🐈 🍽️"],["أَعْطَتْ أُولِيفْيَا القِطَّةَ حَلِيبًا.","face:olivia 🥛"]],
+  qs:[["مَنْ وَجَدَتِ القِطَّةَ؟",[["face:julia","جُولْيَا",1],["face:olivia","أُولِيفْيَا",0],["face:sophie","صُوفِي",0]]],
+      ["مَاذَا شَرِبَتِ القِطَّةُ؟",[["🥛","حَلِيبًا",1],["💧","مَاءً",0],["🍵","شَايًا",0]]]]},
+ {title:"الشِّطْرَنْجُ",lines:[["لَعِبَتْ صُوفِي الشِّطْرَنْجَ مَعَ بَابَا.","face:sophie ♟️ 👨"],["فَكَّرَتْ صُوفِي كَثِيرًا.","face:sophie 🤔"],["فَازَتْ صُوفِي وَفَرِحَتْ!","face:sophie 🏆"]],
+  qs:[["مَعَ مَنْ لَعِبَتْ صُوفِي؟",[["👨","بَابَا",1],["👩","مَامَا",0],["face:julia","جُولْيَا",0]]],
+      ["مَنْ فَازَتْ؟",[["face:sophie","صُوفِي",1],["face:olivia","أُولِيفْيَا",0],["face:julia","جُولْيَا",0]]]]}
+];
+function picRow(pic,size){ return '<span class="picrow">'+pic.split(" ").map(t=>picHTML(t,size)).join("")+'</span>'; }
+const STAGES3=[
+ {type:"s3pic",  name:"جملة وصورة", sample:"🐈 💤", need:15},
+ {type:"s3fill", name:"أكملي",      sample:"___",   need:15},
+ {type:"s3order",name:"رتّبي",      sample:"١٢٣",   need:15},
+ {type:"s3read", name:"اقرئي بصوتك",sample:"🎤",    need:0},
+ {type:"s3story",name:"قصص",        sample:"📚",    need:0}
+];
+const L3TYPES=["s3pic","s3fill","s3order","s3read","s3story","auto3"];
+const STAGE3_OF={s3pic:0,s3fill:1,s3order:2,s3read:3,s3story:4};
+const L3SETS=[
+ {name:"الموسيقى", items:["🎹","🥁","🎸","🎺","🎻","🎷","🎤","🎵","🎶","🪕"]},
+ {name:"الرياضة",  items:["⚽","🏀","🎾","🏐","🤸‍♀️","⛸️","🏊‍♀️","🚴‍♀️","♟️","🏅"]},
+ {name:"الحفلة",   items:["🎈","🎉","🎁","🪅","🎀","🧸","🪄","🎊","🍿","👑"]},
+ {name:"الطبيعة",  items:["🌸","🌻","🌈","🍄","🌵","🌴","🍁","🌷","🌼","🌳"]}
+];
+const L3STK=[].concat(...L3SETS.map((s,si)=>s.items.map(e=>({e,set:si}))));
+function l3(k){ return Object.assign({pts:[0,0,0,0,0],open:false,sc:0,ss:0,stage:1},k.l3||{}); }
+function l3Open(k){ return l2Earned(l2(k))>=L2STK.length || l3(k).open; }
+function stage3FromPts(p){ let s=1; if(p[0]>=15) s=2; if(s>=2&&p[1]>=15) s=3; if(s>=3&&p[2]>=15) s=4; return s; }
+function stage3Count(k){ const l=l3(k); return Math.max(l.stage||1, stage3FromPts(l.pts)); }
+function stage3State(k,i){
+  const c=stage3Count(k);
+  const open = i<=2 ? i<c : c>=4;
+  if(!open) return "locked";
+  if(i===3 && (!SR||micBlocked)) return "الميكروفون غير متاح على هذا الجهاز";
+  return "open";
+}
+function l3Earned(l){ return Math.min(L3STK.length, Math.floor((l.sc||0)/PER_STICKER)); }
+function nextSticker3HTML(k){
+  const l=l3(k), got=l3Earned(l);
+  if(got>=L3STK.length) return '<div class="nextstk"><span class="ns-pic">🏆</span><b>جمعتِ كل ملصقات الجمل!</b></div>';
+  const have=(l.sc||0)%PER_STICKER;
+  return '<div class="nextstk"><span class="ns-pic mystery">'+L3STK[got].e+'</span><div style="flex:1"><b>الملصق القادم</b><div class="ns-dots">'
+    +[...Array(PER_STICKER)].map((_,i)=>'<i class="'+(i<have?'on':'')+'">★</i>').join("")+'</div></div><small>'+(PER_STICKER-have)+' ⭐</small></div>';
+}
+const PARTICLES=["فِي","عَلَى","إِلَى","مِنَ","مَعَ"];
+const ALLWORDS=[...new Set(SENT.flatMap(o=>o.words))];
+function shareWord(a,b){ const n=w=>normAr(w).replace(/^ال/,""); const A=new Set(a.words.map(n)); return b.words.some(w=>A.has(n(w))); }
+function pickSents(n){ return shuffle(SENT.map(o=>o.i)).slice(0,n); }
+function makeRound3(type){
+  const k=kid(me);
+  if(type==="auto3"){ const open=STAGES3.map((s,i)=>i).filter(i=>stage3State(k,i)==="open"); type=STAGES3[(Math.random()<0.5||open.length===1)?open[open.length-1]:rnd(open)].type; }
+  const stage=STAGE3_OF[type], base={type,cur:0,practice:false,level:3,stage3Before:stage3Count(k)};
+  if(type==="s3story"){
+    const st=rnd(STORIES.map((s,i)=>i)), S3=STORIES[st];
+    const qs=S3.qs.map(([q,opts])=>({stage,prompt:q,opts:shuffle(opts.map(([pic,label,ok])=>({html:picHTML(pic,56)+'<span>'+label+'</span>',ok:!!ok,story:true}))),tries:0,done:false,ok:false}));
+    return Object.assign(base,{qs,story:st,page:0});
+  }
+  const n = type==="s3order"?3 : type==="s3read"?3 : 4;
+  const qs=pickSents(n).map(si=>{
+    const o=SENT[si], q={stage,s:si,tries:0,done:false,ok:false,helped:false};
+    if(type==="s3pic"){
+      const others=shuffle(SENT.filter(x=>x.i!==si && x.pic!==o.pic)); const close=others.filter(x=>shareWord(o,x)), far=others.filter(x=>!shareWord(o,x));
+      q.opts=shuffle([o].concat(close.concat(far).slice(0,2))).map(x=>({html:picRow(x.pic,52),ok:x.i===si}));
+    }
+    if(type==="s3fill"){
+      const cand=o.words.map((w,j)=>j).filter(j=>!PARTICLES.includes(o.words[j]) && stripH(o.words[j]).length>=3);
+      q.blank=rnd(cand.length?cand:[o.words.length-1]);
+      const ans=o.words[q.blank], hasAl=stripH(ans).startsWith("ال");
+      const pool=shuffle(ALLWORDS.filter(w=>stripH(w)!==stripH(ans) && !PARTICLES.includes(w) && stripH(w).startsWith("ال")===hasAl));
+      q.opts=shuffle([ans].concat(pool.slice(0,2))).map(w=>({html:w,ok:w===ans,word:true}));
+    }
+    if(type==="s3order"){ let t; do{ t=shuffle(o.words.map((w,j)=>({w,j,used:false}))); }while(o.words.length>1 && t.every((x,j)=>x.j===j)); q.tiles=t; q.built=0; }
+    return q;
+  });
+  return Object.assign(base,{qs});
+}
+function promptCurrent3(){
+  const r=round, q=r.qs[r.cur];
+  if(r.type==="s3order") say(SENT[q.s].s,0.75);
+  else if(r.type==="s3story" && r.page<STORIES[r.story].lines.length) return;
+  else if(r.type==="s3story") say(q.prompt);
+}
+function gameHTML3(){
+  const r=round, gm=GAMES[r.type], q=r.qs[r.cur];
+  const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
+  const top='<div class="screen"><div class="gtop"><button class="iconbtn" data-act="quit" aria-label="back home">✕</button>'+dots+face(me,52)+'</div><div class="stage">';
+  let body='';
+  if(r.type==="s3story"){
+    const S3=STORIES[r.story];
+    if(r.page<S3.lines.length){
+      const [line,pic]=S3.lines[r.page];
+      body='<div class="prompt">📚 '+S3.title+'</div>'+picRow(pic,80)+'<div class="bigsent">'+line+'</div>'
+        +'<div class="row"><button class="speak" data-act="s3say" aria-label="listen">🔊</button><button class="btn gold" data-act="s3page">'+(r.page<S3.lines.length-1?'التالي ◀':'الأسئلة ◀')+'</button></div>'
+        +'<div class="storydots">'+S3.lines.map((_,i)=>'<i class="'+(i<=r.page?'on':'')+'"></i>').join("")+'</div>';
+      return top+body+'</div></div>';
+    }
+    body='<div class="prompt"><button class="speak" data-act="replay" aria-label="listen again">🔊</button>'+q.prompt+'</div><div class="opts">'+q.opts.map((o,i)=>'<button class="opt optpic" data-act="answer3" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
+    return top+body+'</div></div>';
+  }
+  const o=SENT[q.s];
+  if(r.type==="s3pic"){
+    body='<div class="prompt">'+gm.title+'<button class="speak small" data-act="help3" aria-label="help">🔊</button></div><div class="bigsent">'+o.s+'</div><div class="opts">'+q.opts.map((x,i)=>'<button class="opt optpic" data-act="answer3" data-o="'+i+'" id="p'+i+'">'+x.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
+  } else if(r.type==="s3fill"){
+    const shown=o.words.map((w,j)=>j===q.blank?(q.done?'<span class="filled">'+w+'</span>':'<span class="blank">؟</span>'):w).join(" ");
+    body='<div class="prompt">'+gm.title+'<button class="speak small" data-act="help3" aria-label="help">🔊</button></div>'+picRow(o.pic,64)+'<div class="bigsent">'+shown+'</div><div class="opts">'+q.opts.map((x,i)=>'<button class="opt optw" data-act="answer3" data-o="'+i+'" id="p'+i+'">'+x.html+'</button>').join("")+'</div>';
+  } else if(r.type==="s3order"){
+    const built=q.tiles.filter(t=>t.used).sort((a,b)=>a.j-b.j).map(t=>t.w).join(" ");
+    body='<div class="prompt"><button class="speak" data-act="replay" aria-label="listen again">🔊</button>'+gm.title+'</div>'+picRow(o.pic,64)
+      +'<div class="bigsent build">'+(built||'&nbsp;')+'<span class="slotsleft">'+'•'.repeat(o.words.length-q.built)+'</span></div>'
+      +'<div class="tiles">'+q.tiles.map((t,i)=>'<button class="tile wtile'+(t.used?' used':'')+'" data-act="tile3" data-o="'+i+'" id="t'+i+'"'+(t.used?' disabled':'')+'>'+t.w+'</button>').join("")+'</div>';
+  } else if(r.type==="s3read"){
+    body='<div class="prompt">'+gm.title+'</div><div class="bigsent">'+o.s+'</div><button class="mic" data-act="mic3" id="micbtn" aria-label="microphone">🎤</button><div class="micstat" id="micstat">اضغطي على الميكروفون واقرئي الجملة</div><div class="reveal" id="reveal"></div>';
+  }
+  return top+body+'</div></div>';
+}
+function bumpL3(q,d){
+  if(!d) return;
+  const k=pendingKid||kid(me), l=l3(k), pts=l.pts.slice();
+  pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
+  k.l3=Object.assign({},l,{pts,sc:(l.sc||0)+(d>0?1:0),stage:Math.max(l.stage||1,stage3FromPts(pts))}); pendingKid=k;
+}
+function answer3(i){
+  const q=round.qs[round.cur]; if(q.done) return;
+  const btn=$("#p"+i);
+  if(q.opts[i].ok){
+    q.done=true; q.ok=(q.tries===0 && !q.helped); btn.classList.add("right"); sfx.ok(); bumpL3(q,q.ok?1:0);
+    if(round.type==="s3fill"){ render(); setTimeout(()=>say(SENT[q.s].s,0.75),250); setTimeout(nextQ,2600); return; }
+    if(round.type==="s3pic"){ const rv=$("#reveal"); if(rv) rv.textContent="✓"; setTimeout(()=>say(rnd(PRAISE)+" "+SENT[q.s].s,0.8),250); setTimeout(nextQ,2600); return; }
+    setTimeout(()=>say(rnd(PRAISE)),250); setTimeout(nextQ,1900);
+  } else {
+    if(btn.classList.contains("wrong")) return;
+    q.tries++; btn.classList.add("wrong"); sfx.no(); if(q.tries===1) bumpL3(q,-1);
+    setTimeout(()=>say("حَاوِلِي مَرَّةً أُخْرَى"),350);
+  }
+}
+function tile3(i){
+  const q=round.qs[round.cur], t=q.tiles[i]; if(q.done||t.used) return;
+  if(t.j===q.built){
+    t.used=true; q.built++; sfx.tap();
+    if(q.built===q.tiles.length){ q.done=true; q.ok=q.tries<=1; bumpL3(q,q.ok?1:0); render(); sfx.ok(); setTimeout(()=>say(rnd(PRAISE)+" "+SENT[q.s].s,0.8),200); setTimeout(nextQ,2800); }
+    else render();
+  } else {
+    q.tries++; sfx.no(); if(q.tries===2) bumpL3(q,-1);
+    const b=$("#t"+i); if(b){ b.classList.add("wrong"); setTimeout(()=>b.classList.remove("wrong"),400); }
+  }
+}
+function heardSentence(alts,sentence){
+  const target=SENT.find(o=>o.s===sentence).words.map(w=>normAr(w).replace(/^ال/,""));
+  return alts.some(a=>{
+    const toks=normAr(a).split(/\s+/).map(t=>t.replace(/^و?ال/,""));
+    const hit=target.filter(t=>toks.some(x=>x===t||(t.length>=3&&lev(x,t)<=1))).length;
+    return hit>=Math.ceil(target.length*0.75);
+  });
+}
+function mic3(){
+  const q=round.qs[round.cur]; if(q.done||listening||!SR) return;
+  try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){}
+  const btn=$("#micbtn"), st=$("#micstat");
+  const rec=new SR(); rec.lang="ar-AE"; rec.interimResults=false; rec.maxAlternatives=5;
+  let got=false; listening=true; if(btn) btn.classList.add("on"); if(st) st.textContent="أسمعكِ… اقرئي الجملة";
+  rec.onresult=e=>{ got=true; listening=false; if(btn) btn.classList.remove("on"); readResult3(q,[...e.results[0]].map(a=>a.transcript)); };
+  rec.onerror=e=>{ got=true; listening=false; if(btn) btn.classList.remove("on");
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ micBlocked=true; if(st) st.textContent="الميكروفون غير مسموح. اطلبي من بابا أو ماما السماح به."; q.done=true; setTimeout(nextQ,2500); }
+    else if(st) st.textContent= e.error==="no-speech" ? "لم أسمع شيئًا. اضغطي واقرئي بصوت أعلى" : "حاولي مرة أخرى"; };
+  rec.onend=()=>{ listening=false; if(btn) btn.classList.remove("on"); if(!got && st) st.textContent="لم أسمع شيئًا. اضغطي واقرئي بصوت أعلى"; };
+  try{ rec.start(); }catch(e){ listening=false; if(btn) btn.classList.remove("on"); }
+}
+function readResult3(q,alts){
+  const st=$("#micstat"), o=SENT[q.s];
+  if(heardSentence(alts,o.s)){
+    q.done=true; q.ok=q.tries<=1 && !q.helped; bumpL3(q,q.ok?1:0); sfx.ok();
+    if(st) st.textContent="✓"; const rv=$("#reveal"); if(rv) rv.innerHTML=picRow(o.pic,48); setTimeout(()=>say(rnd(PRAISE)),200); setTimeout(nextQ,2200);
+  } else {
+    q.tries++; sfx.no();
+    if(q.tries===1){ bumpL3(q,-1); if(st) st.textContent="قريبًا! حاولي مرة أخرى"; }
+    else if(q.tries===2){ q.helped=true; if(st) st.textContent="اسمعي واقرئي معي"; say(o.s,0.7); }
+    else { q.done=true; q.ok=false; const rv=$("#reveal"); if(rv) rv.innerHTML=picRow(o.pic,48); if(st) st.textContent=""; say(o.s,0.7); setTimeout(nextQ,3000); }
+  }
+}
+function path3SVG(k){
+  const pos=[[390,290],[270,240],[150,185],[150,80],[300,60]], l=l3(k);
+  let s='<svg class="house" viewBox="0 0 480 340" preserveAspectRatio="xMidYMid meet">';
+  s+='<rect x="0" y="0" width="480" height="340" rx="16" fill="#E4DDF6"/>';
+  s+='<path d="M470 330 C430 305 410 300 390 290 S300 255 270 240 S180 215 150 185 S120 110 150 80 S250 50 300 60 S400 40 440 40" stroke="#F3E3B8" stroke-width="30" fill="none" stroke-linecap="round"/>';
+  s+='<g transform="translate(400 4)"><rect x="6" y="28" width="60" height="46" fill="#fff" stroke="#7B5BD6" stroke-width="3"/><path d="M0 30 L36 2 L72 30 Z" fill="#7B5BD6"/><text x="36" y="62" text-anchor="middle" font-size="24">🏰</text></g>';
+  STAGES3.forEach((st,i)=>{
+    const [x,y]=pos[i], state=stage3State(k,i), open=state==="open", frac=st.need?Math.min(1,(l.pts[i]||0)/st.need):1, C=2*Math.PI*36;
+    s+='<g class="room" data-act="'+(open?'play':'stlock3')+'" data-type="'+st.type+'" data-s="'+i+'" role="button" aria-label="'+st.name+'">';
+    s+='<circle cx="'+x+'" cy="'+y+'" r="36" fill="'+(open?'#fff':'#C9C3B6')+'" stroke="'+(open?'#EDE7F9':'#B1AA9C')+'" stroke-width="8"/>';
+    if(open && st.need) s+='<circle cx="'+x+'" cy="'+y+'" r="36" fill="none" stroke="#7B5BD6" stroke-width="8" stroke-dasharray="'+(frac*C)+' '+C+'" transform="rotate(-90 '+x+' '+y+')" stroke-linecap="round"/>';
+    s+= open ? '<text x="'+x+'" y="'+(y+8)+'" text-anchor="middle" font-size="22" font-family="Noto Naskh Arabic, serif" font-weight="700" fill="#2A2140">'+st.sample+'</text>'
+             : '<text x="'+x+'" y="'+(y+9)+'" text-anchor="middle" font-size="24">🔒</text>';
+    s+='<text x="'+x+'" y="'+(y+58)+'" text-anchor="middle" font-size="16" font-weight="800" fill="#2A2140" font-family="Baloo Bhaijaan 2, sans-serif">'+st.name+'</text></g>';
+  });
+  return s+'</svg>';
+}
+
 /* ======================= Family voice: recorded clips ======================= */
 // Clips live in the family's "settings" collection as documents with kind:"clip", so they sync to every tablet.
 let CLIPS={}; const BUF={}; let clipNodes=[], clipSeq=0;
@@ -990,6 +1233,8 @@ function studioGroups(){
   add("names","Letter names","The name of the letter, as taught at school: ألِف، باء، تاء…",L.map(l=>l.name));
   add("l1words","Letter-house words","The picture word for each letter.",L.map(l=>l.word));
   add("rwords","Reading words","Read each word clearly, the way you would want them to read it.",WORDS.map(o=>o.w));
+  add("sentences","Sentences","Read each sentence naturally, not word by word.",SENT.map(o=>o.s));
+  add("stories","Stories","Story lines, questions and answers. Read like a bedtime story.",[].concat(...STORIES.map(s=>[s.title].concat(s.lines.map(l=>l[0])).concat(...s.qs.map(q=>[q[0]].concat(q[1].map(o=>o[1])))))));
   add("phrases","Phrases","Instructions and praise. Use a happy, warm voice.",
     Object.keys(GAMES).map(k=>GAMES[k].say).concat(PHRASES).concat(GIRLS.map(g=>"أَهْلًا يَا "+g.say)).concat(GROUPS.map(g=>g.name)));
   return groups;
@@ -1085,6 +1330,10 @@ function parentHTML(){
     + GIRLS.map(g=>{ const k=kid(g.id), l=l2(k); return '<tr><td><b style="color:'+g.color+'">'+g.en+'</b></td><td>'+(l2Open(k)?'Station '+stageCount(k)+' / 4':'Locked (opens at room 3)')+'</td><td>'+Math.min(l.pts[0],15)+' / 15</td><td>'+Math.min(l.pts[1],15)+' / 15</td><td>'+Math.min(l.pts[2],20)+' / 20</td><td>'+l.wst.length+'</td></tr>'; }).join("")+'</table>'
     + '<p style="margin:6px 0;color:var(--muted)">Reading opens by itself when a girl reaches the third room. Each station opens the next one after enough correct answers. '+(SR?'Read-aloud uses Chrome speech recognition (needs internet; Chrome asks for the microphone once).':'This tablet\'s browser does not support speech recognition, so the read-aloud station stays closed.')+'</p>'
     + '<button class="btn small ghost" data-act="l2openall">Open reading now for all three</button>';
+  s+='<h4>Sentences (level 3)</h4><table><tr><th>Girl</th><th>Status</th><th>Picture</th><th>Complete</th><th>Order</th><th>Stickers</th></tr>'
+    + GIRLS.map(g=>{ const k=kid(g.id), l=l3(k); return '<tr><td><b style="color:'+g.color+'">'+g.en+'</b></td><td>'+(l3Open(k)?'Station '+Math.min(stage3Count(k),4)+' / 4':'Locked ('+l2Earned(l2(k))+' / 40 reading stickers)')+'</td><td>'+Math.min(l.pts[0],15)+' / 15</td><td>'+Math.min(l.pts[1],15)+' / 15</td><td>'+Math.min(l.pts[2],15)+' / 15</td><td>'+(l.ss||0)+' / 40</td></tr>'; }).join("")+'</table>'
+    + '<p style="margin:6px 0;color:var(--muted)">Sentences open when a girl has collected all 40 reading-album stickers. Stories and read-aloud open after the first three stations.</p>'
+    + '<button class="btn small ghost" data-act="l3openall">Open sentences now for all three</button>';
   s+='<h4>Settings</h4><table><tr><td>Daily share per girl</td><td><span class="seg">'+[3,5,8,16,24].map(n=>'<button data-act="setshare" data-n="'+n+'" class="'+(n===sh?'on':'')+'">'+n+'</button>').join("")+'</span></td></tr>'
    + '<tr><td>Daily reward (shown to the girls)</td><td><input type="text" id="rw" value="'+esc(S.settings.reward)+'"></td></tr>'
    + '<tr><td>Weekly bonus</td><td><input type="text" id="wrw" value="'+esc(S.settings.weekReward)+'"></td></tr>'
@@ -1135,12 +1384,22 @@ document.addEventListener("click",e=>{
     case "stts": ttsOnly(studioItem().t); break;
     case "sdel": studioDelete(); break;
     case "answer2": answer2(+b.dataset.o); break;
+    case "answer3": answer3(+b.dataset.o); break;
+    case "tile3": tile3(+b.dataset.o); break;
+    case "mic3": mic3(); break;
+    case "help3": { const q=round.qs[round.cur]; if(!q.done){ q.helped=true; say(SENT[q.s].s,0.75); } break; }
+    case "s3say": { const S3=STORIES[round.story]; say(S3.lines[round.page][0],0.75); break; }
+    case "s3page": round.page++; render(); if(round.page>=STORIES[round.story].lines.length) setTimeout(promptCurrent3,300); break;
+    case "stlock3": { const k=kid(me), s=+b.dataset.s, st=stage3State(k,s);
+      overlay={type:"msg",icon:"🔒",text: st==="locked" ? "أكملي المحطة السابقة لفتح "+STAGES3[s].name : st}; renderOverlay(); break; }
+    case "l3openall": GIRLS.forEach(g=>{ const k=kid(g.id); k.l3=Object.assign({},l3(k),{open:true}); saveDoc("kids",g.id,k); }); toast("Sentences level opened"); render(); break;
     case "help": { const q=round.qs[round.cur]; if(!q.done){ q.helped=true; say(WORDS[q.w].w); } break; }
     case "tile": tile(+b.dataset.o); break;
     case "mic": mic(); break;
     case "level": { const want=+b.dataset.l, k=kid(me);
       if(want===2 && !l2Open(k)){ overlay={type:"msg",icon:"📖",text:"افتحي 3 غرف في بيت الحروف لتبدئي القراءة"}; renderOverlay(); say("اِفْتَحِي ثَلَاثَ غُرَفٍ لِتَبْدَئِي الْقِرَاءَة"); break; }
-      lsSet("bh_level_"+me,want); render(); if(want===2) say("هَيَّا نَقْرَأ!"); break; }
+      if(want===3 && !l3Open(k)){ const got=l2Earned(l2(k)); overlay={type:"msg",icon:"📚",text:"اجمعي كل ملصقات القراءة لتفتحي الجمل ("+got+" / "+L2STK.length+")"}; renderOverlay(); say("اِجْمَعِي كُلَّ مُلْصَقَاتِ الْقِرَاءَة"); break; }
+      lsSet("bh_level_"+me,want); render(); if(want===2) say("هَيَّا نَقْرَأ!"); if(want===3) say("هَيَّا نَقْرَأُ الْجُمَل!"); break; }
     case "stlock": { const k=kid(me), s=+b.dataset.s, st=stageState(k,s);
       const text = st==="locked" ? "أكملي المحطة السابقة لفتح "+STAGES[s].name : st;
       overlay={type:"msg",icon:"🔒",text}; renderOverlay(); break; }
