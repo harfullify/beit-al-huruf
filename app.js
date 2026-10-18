@@ -298,7 +298,7 @@ function topBar(){
   const g=G(me), k=kid(me);
   return '<div class="top"><button class="who" data-act="switch" aria-label="change player">'+face(me,48)+'<b style="color:'+g.color+'">'+g.ar+'</b></button>'
    + '<span class="pill"><span class="star">★</span>'+k.stars+'</span>'
-   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length+l2(k).wst.length)+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
+   + '<button class="pill" data-act="stickers">📒 '+(k.stickers.length+Object.keys(k.specials).length+l2(k).wst.length+(l2(k).ss||0))+(unseen().length?'<i class="newdot"></i>':'')+'</button>'
    + '<span class="spacer"></span><button class="parentbtn" data-act="parent">🔒 Parents</button></div>';
 }
 
@@ -319,7 +319,7 @@ function homeHTML(){
   return '<div class="screen">'+topBar()+'<div class="home">'
    + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):pathSVG(k))+'</div>'
    + '<div class="side">'
-   +   '<div class="panel"><button class="btn play" data-act="play" data-type="'+(lv===1?'auto':'auto2')+'">▶ العبي</button>'+games+'</div>'
+   +   '<div class="panel"><button class="btn play" data-act="play" data-type="'+(lv===1?'auto':'auto2')+'">▶ العبي</button>'+games+(lv===2?nextStickerHTML(k):'')+'</div>'
    +   '<div class="panel"><h2 style="margin:0 0 8px">جرّة النجوم</h2><div class="jarbox">'+jarSVG()+'<div class="jarstat">'+jarRows+'</div></div>'+ticket+'</div>'
    +   '<div class="panel"><h2 style="margin:0">هذا الأسبوع</h2>'+week+'</div>'
    + '</div></div></div>';
@@ -332,6 +332,7 @@ function stickersHTML(){
   return '<div class="screen">'+topBar()+'<div class="scroll" style="flex:1;padding-bottom:16px"><div class="panel">'
    + '<h2 style="margin:0 0 10px;display:flex;align-items:center;gap:10px">📒 ملصقات '+g.ar+'<button class="btn small ghost" style="margin-inline-start:auto" data-act="home">🏠</button></h2>'
    + '<div class="stk">'+L.map(l=>k.stickers.includes(l.i)?'<div'+(fresh.includes("l"+l.i)?' class="fresh"':'')+'>'+l.pic+'<small>'+l.word+'</small></div>':'<div class="no">'+l.ch+'</div>').join("")+'</div>'
+   + (l2(k).sc?L2SETS.map((st,si)=>'<h2 style="margin:16px 0 10px">✨ ألبوم '+st.name+'</h2><div class="stk">'+st.items.map((e,j)=>{ const n=si*10+j, got=n<(l2(k).ss||0); return got?'<div'+(fresh.includes("x"+n)?' class="fresh"':'')+'>'+e+'</div>':'<div class="no mystery">'+e+'</div>'; }).join("")+'</div>').join(""):'')
    + (l2(k).wst.length?'<h2 style="margin:16px 0 10px">📖 كلمات قرأتِها</h2><div class="stk">'+l2(k).wst.map(w=>'<div'+(fresh.includes("w"+w)?' class="fresh"':'')+'>'+picHTML(WORDS[w].pic,38)+'<small>'+WORDS[w].w+'</small></div>').join("")+'</div>':'')
    + (specials?'<h2 style="margin:16px 0 10px">⭐ ملصقات الفريق</h2><div class="stk">'+specials+'</div>':'')
    + '</div></div></div>';
@@ -620,11 +621,14 @@ function endRound(){
     if(newest.filter(i=>(k.mastery[i]||0)>=3).length>=3){ k.unlocked++; unlockedRoom=GROUPS[k.unlocked-1].name; }
   }
   // reading level: new path stations and word stickers
-  let unlockedStage=null; const newWords=[];
+  let unlockedStage=null; const newWords=[], newL2=[];
   if(r.stageBefore!=null){
     const after=stageCount(k); if(after>r.stageBefore) unlockedStage=STAGES[after-1].name;
     const l=l2(k); Object.keys(l.words).forEach(w=>{ w=+w; if(l.words[w]>=3 && !l.wst.includes(w)) newWords.push(w); });
     if(newWords.length) k.l2=Object.assign({},l,{wst:l.wst.concat(newWords)});
+    const l3=l2(k), earned=l2Earned(l3);
+    for(let n=(l3.ss||0); n<earned; n++) newL2.push(n);
+    if(newL2.length) k.l2=Object.assign({},l3,{ss:earned});
   }
   const wasFull=dayFull();
   if(pass && !r.practice){
@@ -634,11 +638,12 @@ function endRound(){
   let gotSpecial=false;
   if(dayFull() && !k.specials[today()]){ const g=G(me); k.specials=Object.assign({},k.specials,{[today()]:g.specials[Object.keys(k.specials).length%g.specials.length]}); gotSpecial=true; }
   saveDoc("kids",me,k);
-  endInfo={correct,total:r.qs.length,pass,need,practice:r.practice,newStickers,unlockedRoom,unlockedStage,justFull:!wasFull&&dayFull()};
+  endInfo={l2:r.stageBefore!=null,correct,total:r.qs.length,pass,need,practice:r.practice,newStickers,unlockedRoom,unlockedStage,justFull:!wasFull&&dayFull()};
   const reveals=newStickers.map(i=>({pic:L[i].pic,label:L[i].word,say:"مُلْصَقٌ جَدِيد! "+L[i].word}));
   newWords.forEach(w=>reveals.push({pic:WORDS[w].pic.startsWith("face:")?face(WORDS[w].pic.slice(5),170):WORDS[w].pic,label:WORDS[w].w,say:"مُلْصَقٌ جَدِيد! "+WORDS[w].w}));
+  newL2.forEach(n=>reveals.push({pic:L2STK[n].e,label:"ألبوم "+L2SETS[L2STK[n].set].name,say:"مُلْصَقٌ جَدِيد!"}));
   if(gotSpecial) reveals.push({pic:k.specials[today()],label:"ملصق الفريق",say:"مُلْصَقُ الْفَرِيق!"});
-  markUnseen(newStickers.map(i=>"l"+i).concat(newWords.map(w=>"w"+w)).concat(gotSpecial?["s"+today()]:[]));
+  markUnseen(newStickers.map(i=>"l"+i).concat(newWords.map(w=>"w"+w)).concat(newL2.map(n=>"x"+n)).concat(gotSpecial?["s"+today()]:[]));
   if(reveals.length){ showStickers(reveals,false); return; }
   overlay={type:"end"}; renderOverlay(); endSounds();
 }
@@ -661,6 +666,7 @@ function endSheet(){
   if(e.unlockedStage) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🔓 محطة جديدة: '+e.unlockedStage+'!</div>';
   if(e.unlockedRoom) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🔓 فتحتِ '+e.unlockedRoom+'!</div>';
   if(e.newStickers.length) s+='<div class="panel" style="background:#F6F0E2;font-size:22px;font-weight:800">ملصق جديد! '+e.newStickers.map(i=>L[i].pic).join(" ")+'</div>';
+  if(e.l2) s+=nextStickerHTML(kid(me));
   if(e.justFull) s+='<div class="panel" style="background:#FFF3C9;font-size:22px;font-weight:800">🎉 امتلأت الجرّة! 🎟️ '+esc(S.settings.reward)+'</div>';
   else if(!e.practice) s+='<div style="font-weight:700">'+(left?('باقي لكِ '+left+' اليوم'):'✓ أكملتِ حصّتكِ اليوم')+'</div>';
   s+='<div class="row"><button class="btn gold" data-act="again">🔁 مرة أخرى</button><button class="btn ghost" data-act="home">🏠 البيت</button></div></div>';
@@ -715,6 +721,23 @@ function letterIdx(ch){ const m={"ا":0,"أ":0,"إ":0,"آ":0,"ة":2,"ى":27}; re
 WORDS.forEach(o=>{ o.chars=[...stripH(o.w)]; o.letters=[...new Set(o.chars.map(letterIdx))]; });
 function picHTML(p,size){ return p.startsWith("face:") ? face(p.slice(5),size) : '<span style="font-size:'+size+'px;line-height:1">'+p+'</span>'; }
 
+// Level 2 collectible stickers: a new one every few correct answers, in themed albums.
+const L2SETS=[
+ {name:"البحر",   items:["🐠","🐙","🦀","🐬","🐳","🦈","🐢","🦑","🐚","🐡"]},
+ {name:"الفضاء",  items:["🚀","🪐","🌙","⭐","☄️","🛸","🌍","👩‍🚀","🔭","🌌"]},
+ {name:"الحلويات",items:["🍦","🍩","🧁","🍭","🍪","🍫","🍰","🎂","🍬","🍓"]},
+ {name:"الحيوانات",items:["🦄","🐼","🦋","🐰","🐨","🐧","🦔","🐹","🦜","🐞"]}
+];
+const L2STK=[].concat(...L2SETS.map((s,si)=>s.items.map(e=>({e,set:si}))));
+const PER_STICKER=6;
+function l2Earned(l){ return Math.min(L2STK.length, Math.floor((l.sc||0)/PER_STICKER)); }
+function nextStickerHTML(k){
+  const l=l2(k), got=l2Earned(l);
+  if(got>=L2STK.length) return '<div class="nextstk"><span class="ns-pic">🏆</span><b>جمعتِ كل الملصقات!</b></div>';
+  const have=(l.sc||0)%PER_STICKER, nx=L2STK[got];
+  return '<div class="nextstk"><span class="ns-pic mystery">'+nx.e+'</span><div style="flex:1"><b>الملصق القادم</b><div class="ns-dots">'
+    +[...Array(PER_STICKER)].map((_,i)=>'<i class="'+(i<have?'on':'')+'">★</i>').join("")+'</div></div><small>'+(PER_STICKER-have)+' ⭐</small></div>';
+}
 const STAGES=[
  {type:"syl",  name:"الحركات",     sample:"بَ بِ بُ", need:15},
  {type:"long", name:"المدود",      sample:"با بو بي", need:15},
@@ -822,7 +845,8 @@ function bumpL2(q,d){
   pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
   const words=Object.assign({},l.words);
   if(q.w!=null) words[q.w]=Math.max(0,Math.min(3,(words[q.w]||0)+d));
-  k.l2=Object.assign({},l,{pts,words,stage:Math.max(l.stage||1,stageFromPts(pts))}); pendingKid=k;
+  const sc=(l.sc||0)+(d>0?1:0);
+  k.l2=Object.assign({},l,{pts,words,sc,stage:Math.max(l.stage||1,stageFromPts(pts))}); pendingKid=k;
 }
 function showWordReveal(q){ const rv=$("#reveal"); if(rv && q.w!=null) rv.innerHTML=picHTML(WORDS[q.w].pic,44)+'  '+WORDS[q.w].w; }
 function answer2(i){

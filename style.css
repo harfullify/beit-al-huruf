@@ -197,6 +197,16 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .schips button.done{background:#CDEBD4;color:#1E6B34}
 .schips button.cur{outline:3px solid var(--blue)}
 
+/* Level 2 sticker progress */
+.nextstk{display:flex;align-items:center;gap:10px;margin-top:10px;background:#F6F0E2;border-radius:16px;padding:8px 12px;text-align:start}
+.nextstk .ns-pic{font-size:40px;line-height:1}
+.mystery{filter:grayscale(1) brightness(.35) opacity(.45)}
+.ns-dots{display:flex;gap:4px;margin-top:2px;direction:rtl}
+.ns-dots i{font-style:normal;color:#DCD2BE;font-size:18px}
+.ns-dots i.on{color:var(--gold)}
+.nextstk small{font-weight:800;color:var(--muted)}
+.stk div.no.mystery{font-size:38px}
+
 /* Sticker reveal */
 .stkreveal{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:520px;text-align:center}
 .stkreveal .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,#FFF1BF 0 10deg,transparent 10deg 20deg);animation:spin 14s linear infinite;z-index:0}
