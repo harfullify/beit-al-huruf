@@ -179,6 +179,24 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 @keyframes micpulse{50%{box-shadow:0 0 0 18px rgba(224,97,79,.25),0 7px 0 #A8402F}}
 .micstat{font-weight:800;font-size:22px;min-height:1.4em;text-align:center}
 
+/* Recording studio */
+.sgroups{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sgroups button{padding:6px 12px;border-radius:999px;background:#F1EADB;font-weight:700}
+.sgroups button.on{background:var(--blue);color:#fff}
+.sgroups small{opacity:.75;font-variant-numeric:tabular-nums}
+.stip{margin:4px 0 10px;color:var(--muted)}
+.scard{background:#F6F0E2;border-radius:20px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.snav{display:flex;align-items:center;justify-content:space-between;width:100%;font-variant-numeric:tabular-nums;color:var(--muted)}
+.stext{font-family:var(--f-letter);font-size:clamp(56px,10vw,96px);font-weight:700;line-height:1.4;text-align:center}
+.sstate{color:var(--muted);text-align:center;min-height:1.3em}
+.recbtn{width:96px;height:96px;border-radius:50%;background:var(--bad);color:#fff;font-size:44px;box-shadow:0 6px 0 #A8402F;display:grid;place-items:center}
+.recbtn.on{animation:micpulse 1s ease-in-out infinite}
+.recbtn:disabled{opacity:.4}
+.schips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.schips button{font-family:var(--f-letter);font-size:20px;padding:2px 10px;border-radius:10px;background:#EEE7D8;color:#8E8473;line-height:1.6}
+.schips button.done{background:#CDEBD4;color:#1E6B34}
+.schips button.cur{outline:3px solid var(--blue)}
+
 /* Sticker reveal */
 .stkreveal{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:520px;text-align:center}
 .stkreveal .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,#FFF1BF 0 10deg,transparent 10deg 20deg);animation:spin 14s linear infinite;z-index:0}

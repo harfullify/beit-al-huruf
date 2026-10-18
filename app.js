@@ -139,6 +139,8 @@ async function connect(uploadLocal){
   }
   unsubs.push(fam.collection("kids").onSnapshot(snap=>{ const k={}; snap.docs.forEach(d=>{ if(d.exists) k[d.id]=d.data(); }); S.kids=k; cache(); onRemote(); },e=>console.warn(e)));
   unsubs.push(fam.collection("redeem").onSnapshot(snap=>{ const r={}; snap.docs.forEach(d=>{ if(d.exists) r[d.id]=d.data(); }); S.redeem=r; cache(); onRemote(); },e=>console.warn(e)));
+  CLIPS={};
+  unsubs.push(fam.collection("settings").where("kind","==","clip").onSnapshot(snap=>{ const c={}; snap.docs.forEach(d=>{ if(d.exists) c[d.id]=d.data(); }); CLIPS=c; if(view.name==="studio" && studio.state==="idle") render(); },e=>console.warn(e)));
   unsubs.push(fam.collection("settings").doc("family").onSnapshot(d=>{ if(d.exists){ S.settings=Object.assign(defaultSettings(),d.data()); cache(); onRemote(); } },e=>console.warn(e)));
   subscribeJar();
   render();
@@ -160,8 +162,9 @@ let arVoice=null;
 function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); arVoice=vs.find(v=>/^ar([-_]|$)/i.test(v.lang))||null; }catch(e){} }
 try{ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }catch(e){}
 function say(text,rate){
+  try{ speechSynthesis.cancel(); }catch(e){}
+  try{ if(playRecorded(text)) return; stopClip(); }catch(e){} // the family's own recordings win over the computer voice
   try{
-    speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);
     u.lang=arVoice?arVoice.lang:"ar-SA"; if(arVoice) u.voice=arVoice;
     u.rate=rate||0.8; u.pitch=1.1;
@@ -281,6 +284,7 @@ function render(){
   else if(view.name==="game") { app.innerHTML=gameHTML(); afterGameRender(); }
   else if(view.name==="stickers") app.innerHTML=stickersHTML();
   else if(view.name==="parent") app.innerHTML=parentHTML();
+  else if(view.name==="studio") app.innerHTML=studioHTML();
   renderOverlay();
 }
 
@@ -911,6 +915,127 @@ function pathSVG(k){
   return s+'</svg>';
 }
 
+/* ======================= Family voice: recorded clips ======================= */
+// Clips live in the family's "settings" collection as documents with kind:"clip", so they sync to every tablet.
+let CLIPS={}; const BUF={}; let clipNodes=[], clipSeq=0;
+const clipNorm = t => String(t).replace(/[،,!?؟.]/g,"").replace(/\s+/g," ").trim();
+function clipId(t){ const s=clipNorm(t); let h=5381; for(let i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0; return "clip_"+h.toString(36)+"_"+s.length; }
+function getAC(){ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume().catch(()=>{}); return AC; }
+function b64ToBuf(b64){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; }
+function clipBuffer(id){
+  const c=CLIPS[id]; if(!c) return Promise.reject();
+  const key=id+"@"+(c.at||"");
+  if(!BUF[key]) BUF[key]=getAC().decodeAudioData(b64ToBuf(c.a));
+  return BUF[key];
+}
+function stopClip(){ clipSeq++; clipNodes.forEach(n=>{ try{ n.stop(); }catch(e){} }); clipNodes=[]; }
+// Find recordings that cover the whole text (whole phrase, or word by word). Returns null if anything is missing.
+function clipsFor(text){
+  const whole=clipId(text); if(CLIPS[whole]) return [whole];
+  const toks=clipNorm(text).split(" "), out=[]; let i=0;
+  while(i<toks.length){
+    let hit=null;
+    for(let j=toks.length;j>i;j--){ const id=clipId(toks.slice(i,j).join(" ")); if(CLIPS[id]){ hit=[id,j]; break; } }
+    if(!hit) return null; out.push(hit[0]); i=hit[1];
+  }
+  return out.length?out:null;
+}
+function playClips(ids){
+  stopClip(); const my=clipSeq;
+  Promise.all(ids.map(clipBuffer)).then(bufs=>{
+    if(my!==clipSeq) return;
+    const ac=getAC(); let t=ac.currentTime+0.05;
+    bufs.forEach((b,n)=>{ const c=CLIPS[ids[n]], s=Math.max(0,c.s||0), e=Math.min(b.duration,c.e||b.duration);
+      const src=ac.createBufferSource(); src.buffer=b; src.connect(ac.destination); src.start(t,s,Math.max(0.05,e-s)); clipNodes.push(src); t+=Math.max(0.05,e-s)+0.12; });
+  }).catch(()=>{});
+}
+function playRecorded(text){ const ids=clipsFor(text); if(!ids) return false; playClips(ids); return true; }
+
+/* Recording studio (parents) */
+const PHRASES=[
+ ...PRAISE, "حَاوِلِي مَرَّةً أُخْرَى","لِنُحَاوِلْ مِنْ جَدِيد","اُرْسُمِي فَوْقَ الْخَطّ","لَا تَنْسَيِ النِّقَاط","لَا تَنْسَيِ الْهَمْزَة",
+ "قَرِيبًا! حَاوِلِي مَرَّةً أُخْرَى","اِمْتَلَأَتِ الْجَرَّة! أَحْسَنْتُنَّ","فَتَحْتِ غُرْفَةً جَدِيدَة!","فَتَحْتِ مَحَطَّةً جَدِيدَة!",
+ "مُلْصَقٌ جَدِيد!","مُلْصَقُ الْفَرِيق!","هَذِهِ الْغُرْفَةُ مُقْفَلَة","اِسْتَمْتِعْنَ!","هَيَّا نَقْرَأ!","اِفْتَحِي ثَلَاثَ غُرَفٍ لِتَبْدَئِي الْقِرَاءَة"
+];
+function studioGroups(){
+  const seen=new Set(), groups=[];
+  const add=(key,title,tip,texts)=>{ const items=[]; texts.forEach(t=>{ const id=clipId(t); if(!seen.has(id)){ seen.add(id); items.push({t,id}); } }); groups.push({key,title,tip,items}); };
+  const sylls=vs=>{ const a=[]; L.forEach(l=>vs.forEach(v=>a.push(syl(l.i,v)))); return a; };
+  add("syl","Vowel sounds","Say only the sound, short and clear: بَ is “ba”, not the letter name.",sylls(["a","i","u"]));
+  add("long","Long vowels","Stretch the vowel a little: با is “baa”, بو is “buu”, بي is “bii”.",sylls(["aa","ii","uu"]));
+  add("names","Letter names","The name of the letter, as taught at school: ألِف، باء، تاء…",L.map(l=>l.name));
+  add("l1words","Letter-house words","The picture word for each letter.",L.map(l=>l.word));
+  add("rwords","Reading words","Read each word clearly, the way you would want them to read it.",WORDS.map(o=>o.w));
+  add("phrases","Phrases","Instructions and praise. Use a happy, warm voice.",
+    Object.keys(GAMES).map(k=>GAMES[k].say).concat(PHRASES).concat(GIRLS.map(g=>"أَهْلًا يَا "+g.say)).concat(GROUPS.map(g=>g.name)));
+  return groups;
+}
+let studio={g:0,i:0,state:"idle",rec:null,blob:null,b64:null,mime:"",s:0,e:0,msg:""};
+function studioHTML(){
+  const groups=studioGroups(), grp=groups[studio.g], it=grp.items[studio.i], c=CLIPS[it.id];
+  const total=groups.reduce((a,g)=>a+g.items.length,0), done=groups.reduce((a,g)=>a+g.items.filter(x=>CLIPS[x.id]).length,0);
+  const who=lsGet("bh_recby","Baba");
+  let s='<div class="screen scroll" style="padding-bottom:24px"><div class="sheet parent studio" style="width:min(860px,100%);margin:12px auto;max-height:none">';
+  s+='<h3>🎙 Recording studio<button class="btn small ghost x" data-act="studioback">Done</button></h3>';
+  if(!fam) s+='<div class="note warn">This tablet is not linked to the family, so recordings cannot be saved. Link it in Parents first.</div>';
+  s+='<div class="note">Recorded <b>'+done+' / '+total+'</b>. Anything not recorded yet keeps using the computer voice. Recording as '
+    + '<span class="seg">'+["Baba","Mama"].map(n=>'<button data-act="recby" data-n="'+n+'" class="'+(n===who?'on':'')+'">'+n+'</button>').join("")+'</span></div>';
+  s+='<div class="sgroups">'+groups.map((g,n)=>'<button class="'+(n===studio.g?'on':'')+'" data-act="sgroup" data-n="'+n+'">'+g.title+' <small>'+g.items.filter(x=>CLIPS[x.id]).length+'/'+g.items.length+'</small></button>').join("")+'</div>';
+  s+='<p class="stip">'+esc(grp.tip)+'</p>';
+  s+='<div class="scard"><div class="snav"><button class="btn small ghost" data-act="sprev">◀ Prev</button><span>'+(studio.i+1)+' / '+grp.items.length+'</span><button class="btn small ghost" data-act="snext">Next ▶</button></div>'
+    + '<div class="stext" dir="rtl">'+esc(it.t)+'</div>'
+    + '<div class="sstate">'+(c?'✓ Recorded by '+esc(c.by||"")+' ':'Not recorded yet')+(studio.msg?' · '+esc(studio.msg):'')+'</div>';
+  if(studio.state==="recording") s+='<div class="row"><button class="recbtn on" data-act="srec">■</button></div><div class="sstate">Recording… tap to stop</div>';
+  else if(studio.state==="review") s+='<div class="row"><button class="btn ghost" data-act="slisten">▶ Listen</button><button class="btn gold" data-act="ssave">✓ Save &amp; next</button><button class="btn ghost" data-act="sredo">↺ Redo</button></div>';
+  else if(studio.state==="saving") s+='<div class="sstate">Saving…</div>';
+  else s+='<div class="row"><button class="recbtn" data-act="srec"'+(fam?'':' disabled')+'>🎙</button></div><div class="row">'
+    + (c?'<button class="btn small ghost" data-act="splay">▶ Play saved</button>':'')
+    + '<button class="btn small ghost" data-act="stts">🔈 Computer voice</button>'
+    + (c?'<button class="btn small ghost" data-act="sdel" style="color:var(--bad)">Remove recording</button>':'')+'</div>';
+  s+='</div><div class="schips" dir="rtl">'+grp.items.map((x,n)=>'<button class="'+(CLIPS[x.id]?'done ':'')+(n===studio.i?'cur':'')+'" data-act="sjump" data-n="'+n+'">'+esc(x.t)+'</button>').join("")+'</div>';
+  return s+'</div></div>';
+}
+function studioItem(){ const g=studioGroups()[studio.g]; return g.items[studio.i]; }
+function studioMove(d){ const n=studioGroups()[studio.g].items.length; studio.i=(studio.i+d+n)%n; studio.state="idle"; studio.msg=""; render(); }
+let recStream=null, recTimer=null;
+async function studioRecord(){
+  if(studio.state==="recording"){ stopRecording(); return; }
+  stopClip(); try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){}
+  try{
+    recStream = recStream || await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }catch(e){ studio.msg="Microphone not allowed. Allow it in Chrome's site settings and try again."; render(); return; }
+  const mime=["audio/webm;codecs=opus","audio/webm","audio/mp4"].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||"";
+  const rec=new MediaRecorder(recStream, mime?{mimeType:mime,audioBitsPerSecond:48000}:undefined), chunks=[];
+  rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  rec.onstop=()=>{ clearTimeout(recTimer); finishRecording(new Blob(chunks,{type:rec.mimeType||mime||"audio/webm"})); };
+  studio.rec=rec; studio.state="recording"; studio.msg=""; rec.start(); render();
+  recTimer=setTimeout(stopRecording, studio.g<2?3500:6000);
+}
+function stopRecording(){ clearTimeout(recTimer); if(studio.rec && studio.rec.state==="recording") studio.rec.stop(); }
+async function finishRecording(blob){
+  try{
+    const buf=await blob.arrayBuffer();
+    const audio=await getAC().decodeAudioData(buf.slice(0));
+    // trim silence at both ends
+    const d=audio.getChannelData(0), sr=audio.sampleRate; let peak=0; for(let i=0;i<d.length;i++){ const v=Math.abs(d[i]); if(v>peak) peak=v; }
+    if(peak<0.02){ studio.state="idle"; studio.msg="I could not hear anything. Try again a bit closer."; render(); return; }
+    const th=Math.max(0.015,peak*0.08); let a=0,b=d.length-1; while(a<d.length&&Math.abs(d[a])<th) a++; while(b>0&&Math.abs(d[b])<th) b--;
+    studio.s=Math.max(0,a/sr-0.08); studio.e=Math.min(audio.duration,b/sr+0.15);
+    studio.blob=blob; studio.mime=blob.type; studio.decoded=audio;
+    const r=new FileReader(); r.onload=()=>{ studio.b64=String(r.result).split(",")[1]; studio.state="review"; render(); studioListen(); }; r.readAsDataURL(blob);
+  }catch(e){ console.warn(e); studio.state="idle"; studio.msg="Recording failed. Try again."; render(); }
+}
+function studioListen(){ if(!studio.decoded) return; stopClip(); const ac=getAC(), src=ac.createBufferSource(); src.buffer=studio.decoded; src.connect(ac.destination); src.start(ac.currentTime+0.02,studio.s,Math.max(0.05,studio.e-studio.s)); clipNodes.push(src); }
+async function studioSave(){
+  const it=studioItem(); if(!fam||!studio.b64) return;
+  studio.state="saving"; render();
+  const data={kind:"clip",t:it.t,a:studio.b64,m:studio.mime,s:+studio.s.toFixed(3),e:+studio.e.toFixed(3),by:lsGet("bh_recby","Baba"),at:new Date().toISOString()};
+  try{ await fam.collection("settings").doc(it.id).set(data); CLIPS[it.id]=data; studio.b64=null; studio.decoded=null; studio.msg="Saved"; studio.state="idle"; studioMove(1); }
+  catch(e){ console.warn(e); studio.state="review"; studio.msg="Could not save. Check the internet connection."; render(); }
+}
+async function studioDelete(){ const it=studioItem(); if(!fam) return; try{ await fam.collection("settings").doc(it.id).delete(); delete CLIPS[it.id]; studio.msg="Removed"; }catch(e){ studio.msg="Could not remove"; } render(); }
+function ttsOnly(text){ stopClip(); try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=arVoice?arVoice.lang:"ar-SA"; if(arVoice) u.voice=arVoice; u.rate=0.8; speechSynthesis.speak(u); }catch(e){} }
+
 /* ---------- Parent area ---------- */
 function parentHTML(){
   const sh=share(), wk=weekDays();
@@ -922,6 +1047,7 @@ function parentHTML(){
   else s+= S.readOnly ? '<div class="note warn">The sync server refused to save. Check the Firestore rules.</div>'
        : '<div class="note ok">Synced with the family. Family code: <b style="font-family:monospace;font-size:18px">'+prettyKey(fkey)+'</b> (type it on the other tablets). <button class="btn small ghost" data-act="famleave">Unlink this tablet</button></div>';
   s+= arVoice ? '<div class="note ok">Arabic voice: '+esc(arVoice.name)+'</div>' : '<div class="note warn">No Arabic voice found on this tablet. On Android: Settings → Text-to-speech → Google → install Arabic voice data, then reload.</div>';
+  s+='<div class="note">🎙 <b>Family voice:</b> '+Object.keys(CLIPS).length+' recordings. <button class="btn small" data-act="openstudio">Open recording studio</button></div>';
   s+='<h4>Today · '+today()+'</h4><table><tr><th>Girl</th><th>Activities</th><th>Stars today</th><th>Rooms</th><th>Stickers</th></tr>'
     + GIRLS.map(g=>{ const k=kid(g.id), d=S.jar[today()+"_"+g.id]||{}; return '<tr><td><b style="color:'+g.color+'">'+g.en+'</b></td><td>'+(d.n||0)+' / '+sh+'</td><td>'+(d.stars||0)+'</td><td>'+k.unlocked+' / 7</td><td>'+k.stickers.length+' / 28</td></tr>'; }).join("")+'</table>';
   const red=S.redeem["day_"+today()];
@@ -954,7 +1080,7 @@ function parentHTML(){
 /* ---------- Events ---------- */
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b) return;
-  const a=b.dataset.act; sfx.tap();
+  const a=b.dataset.act; if(view.name!=="studio") sfx.tap();
   switch(a){
     case "pickgirl": me=b.dataset.id; lsSet("bh_girl",me); say("أَهْلًا يَا "+G(me).say); { const sp=ensureSpecial(); go("home"); if(sp) setTimeout(()=>showStickers([sp],true),900); else setTimeout(checkCelebrate,400); } break;
     case "switch": go("pick"); break;
@@ -970,6 +1096,20 @@ document.addEventListener("click",e=>{
     case "play": startRound(b.dataset.type); break;
     case "replay": promptCurrent(); break;
     case "answer": answer(+b.dataset.o); break;
+    case "openstudio": studio=Object.assign(studio,{state:"idle",msg:""}); go("studio"); break;
+    case "studioback": stopRecording(); stopClip(); if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; } go("parent"); break;
+    case "recby": lsSet("bh_recby",b.dataset.n); render(); break;
+    case "sgroup": studio.g=+b.dataset.n; studio.i=0; studio.state="idle"; studio.msg=""; render(); break;
+    case "sprev": studioMove(-1); break;
+    case "snext": studioMove(1); break;
+    case "sjump": studio.i=+b.dataset.n; studio.state="idle"; studio.msg=""; render(); break;
+    case "srec": studioRecord(); break;
+    case "sredo": studio.state="idle"; studioRecord(); break;
+    case "slisten": studioListen(); break;
+    case "ssave": studioSave(); break;
+    case "splay": { const it=studioItem(); if(CLIPS[it.id]) playClips([it.id]); break; }
+    case "stts": ttsOnly(studioItem().t); break;
+    case "sdel": studioDelete(); break;
     case "answer2": answer2(+b.dataset.o); break;
     case "help": { const q=round.qs[round.cur]; if(!q.done){ q.helped=true; say(WORDS[q.w].w); } break; }
     case "tile": tile(+b.dataset.o); break;
