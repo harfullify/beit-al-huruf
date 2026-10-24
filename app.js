@@ -35,6 +35,7 @@ const GAMES = {
  pic:{ic:"🖼️",label:"صورة",say:"بِأَيِّ حَرْفٍ تَبْدَأُ الْكَلِمَة؟",title:"بأيّ حرف تبدأ؟"},
  trace:{ic:"✍️",label:"ارسمي",say:"اُرْسُمِي الْحَرْفَ بِإِصْبَعِكِ",title:"ارسمي الحرف"},
  forms:{ic:"🔤",label:"أشكال",say:"مَا هَذَا الْحَرْف؟",title:"ما هذا الحرف؟"},
+ speak:{ic:"🗣️",label:"قولي",say:"اِسْمَعِي ثُمَّ قُولِي",title:"اسمعي ثم قولي"},
  syl:{ic:"✨",label:"الحركات",say:"اِسْمَعِي الصَّوْتَ وَاخْتَارِي",title:"اسمعي الصوت"},
  long:{ic:"〰️",label:"المدود",say:"قَصِيرٌ أَمْ طَوِيل؟ اِسْمَعِي وَاخْتَارِي",title:"قصير أم طويل؟"},
  wpic:{ic:"🖼️",label:"اقرئي وصِلي",say:"اِقْرَئِي الْكَلِمَةَ وَاخْتَارِي الصُّورَة",title:"اقرئي واختاري الصورة"},
@@ -48,6 +49,7 @@ const GAMES = {
  s3story:{ic:"📚",label:"قصص",say:"هَيَّا نَقْرَأُ قِصَّة",title:"قصة"}
 };
 const ROTATION = ["hear","pic","trace","forms"];
+const L1GAMES = ["hear","pic","trace","forms","speak"]; // "speak" only shows where speech recognition works
 const PRAISE = ["أَحْسَنْتِ!","مُمْتَازَة!","رَائِعَة!","بْرَافُو!"];
 const WEEK_AR = ["ن","ث","ر","خ","ج","س","ح"];
 
@@ -321,7 +323,7 @@ function homeHTML(){
   let games = lv===3
     ? '<div class="games g5">'+STAGES3.map((st,i)=>{ const ok=stage3State(k,i)==="open"; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock3')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?GAMES[st.type].ic:"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>'
     : lv===1
-    ? '<div class="games">'+ROTATION.map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>'
+    ? '<div class="games'+(SR?' g5':'')+'">'+L1GAMES.filter(t=>t!=="speak"||SR).map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>'
     : '<div class="games">'+STAGES.map((st,i)=>{ const ok=stageState(k,i)==="open"; const g=GAMES[st.type==="words"?"wpic":st.type]; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?(st.type==="words"?"📖":g.ic):"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>';
   return '<div class="screen">'+topBar()+'<div class="home">'
    + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):lv===2?pathSVG(k):path3SVG(k))+'</div>'
@@ -403,9 +405,10 @@ function renderOverlay(){
   else if(overlay.type==="pin") html=pinSheet();
   else if(overlay.type==="end") html=endSheet();
   else if(overlay.type==="sticker") html=stickerSheet();
+  else if(overlay.type==="lendemo") html=lenDemoSheet();
   else if(overlay.type==="msg") html='<div class="sheet center endbox"><div style="font-size:80px">'+overlay.icon+'</div><h3>'+esc(overlay.text)+'</h3><button class="btn" data-act="close">👍</button></div>';
   el=document.createElement("div"); el.className="veil"; el.id="veil"; el.innerHTML=html;
-  el.addEventListener("click",e=>{ if(e.target===el && overlay && overlay.type!=="end" && overlay.type!=="sticker"){ overlay=null; renderOverlay(); } });
+  el.addEventListener("click",e=>{ if(e.target===el && overlay && overlay.type!=="end" && overlay.type!=="sticker" && overlay.type!=="lendemo"){ overlay=null; renderOverlay(); } });
   document.body.appendChild(el);
 }
 
@@ -440,7 +443,8 @@ function makeRound(type,only){
   const n = type==="trace" ? (only!=null?1:2) : 4;
   const targets = only!=null ? [only] : pickLetters(k,n);
   const qs=targets.map(t=>{
-    const q={t,opts:type==="trace"?null:options(k,t),tries:0,done:false,ok:false};
+    const q={t,opts:(type==="trace"||type==="speak")?null:options(k,t),tries:0,done:false,ok:false};
+    if(type==="speak") q.mode = targets.indexOf(t)%2 ? "word" : "name";
     if(type==="forms"){ const f=forms(t); q.form = L[t].join ? rnd([f.ini,f.med,f.fin]) : f.fin; }
     return q;
   });
@@ -452,6 +456,7 @@ let round=null, trace=null;
 function startRound(type,only){
   round=makeRound(type,only);
   view={name:"game"}; overlay=null; render();
+  if(round.type==="long"){ overlay={type:"lendemo"}; renderOverlay(); playLenDemo(); return; }
   say(GAMES[round.type].say);
   setTimeout(()=>promptCurrent(),1900);
 }
@@ -463,6 +468,7 @@ function promptCurrent(){
   if(round.type==="hear") say(l.name);
   else if(round.type==="pic") say(l.word);
   else if(round.type==="trace") say(l.name);
+  else if(round.type==="speak") say(q.mode==="name"?l.name:l.word,0.7);
 }
 function gameHTML(){
   if(round.level===3) return gameHTML3();
@@ -476,10 +482,14 @@ function gameHTML(){
     body='<div class="prompt">'+gm.title+'<button class="speak" data-act="replay" aria-label="listen again">🔊</button></div><button class="bigpic" data-act="replay">'+l.pic+'</button>';
   } else if(r.type==="forms"){
     body='<div class="prompt">'+gm.title+'</div><div class="bigform">'+q.form+'</div>';
+  } else if(r.type==="speak"){
+    body='<div class="prompt"><button class="speak" data-act="replay" aria-label="listen again">🔊</button>'+(q.mode==="name"?"اسمعي ثم قولي اسم الحرف":"اسمعي ثم قولي الكلمة")+'</div>'
+      +'<div class="saycard"><span class="bigletter">'+l.ch+'</span>'+(q.mode==="word"?'<span class="saypic">'+l.pic+'</span>':'')+'</div>'
+      +'<button class="mic" data-act="micspeak" id="micbtn" aria-label="microphone">🎤</button><div class="micstat" id="micstat">اضغطي على الميكروفون وقولي</div><div class="reveal" id="reveal"></div>';
   } else if(r.type==="trace"){
     body='<div class="prompt"><button class="speak" data-act="replay" aria-label="listen again">🔊</button>'+gm.title+' <span style="font-family:var(--f-letter)">'+l.name+'</span></div><div class="trace-wrap" id="tw"><canvas id="tc"></canvas></div><div class="trace-tools"><button class="btn ghost" data-act="tclear">🧽 امسحي</button></div>';
   }
-  if(r.type!=="trace"){
+  if(r.type!=="trace" && r.type!=="speak"){
     body+='<div class="opts">'+q.opts.map(o=>'<button class="opt" data-act="answer" data-o="'+o+'" id="o'+o+'">'+L[o].ch+'</button>').join("")+'</div>';
     body+='<div class="reveal" id="reveal"></div>';
   }
@@ -617,7 +627,7 @@ let endInfo=null;
 function endRound(){
   const r=round, k=pendingKid||kid(me); pendingKid=null;
   const correct=r.qs.filter(q=>q.ok).length;
-  const need = r.type==="trace" ? 0 : r.type==="wbuild"||r.type==="s3story" ? 1 : r.type==="wread"||r.type==="s3read"||r.type==="s3order" ? 2 : 3;
+  const need = r.type==="trace" ? 0 : r.type==="wbuild"||r.type==="s3story" ? 1 : r.type==="wread"||r.type==="s3read"||r.type==="s3order"||r.type==="speak" ? 2 : 3;
   const pass = correct>=need;
   const msgs=[];
   k.stars=(k.stars||0)+correct;
@@ -818,7 +828,7 @@ function makeRound2(type){
       const v=rnd(["a","i","u"]), o=rnd(["a","i","u"].filter(x=>x!==v));
       const cands=[{html:syl(t,v),key:"s"},{html:syl(t,v+v),key:"l"},{html:syl(t,o+o),key:"o"}];
       const target=Math.random()<0.5?"s":"l";
-      return {stage,say:cands.find(c=>c.key===target).html,opts:shuffle(cands.map(c=>({html:c.html,ok:c.key===target}))),tries:0,done:false,ok:false};
+      return {stage,t,v,isLong:target==="l",say:cands.find(c=>c.key===target).html,opts:shuffle(cands.map(c=>({html:c.html,ok:c.key===target}))),tries:0,done:false,ok:false};
     });
   } else {
     const n = type==="wbuild"?2 : type==="wread"?3 : 4;
@@ -837,9 +847,29 @@ function makeRound2(type){
   }
   return {type,qs,cur:0,practice:false,stageBefore:stageCount(k)};
 }
+/* Short vs long vowels: short is said quickly, long is said slowly and drawn as a long bar */
+const RATE_SHORT=1.05, RATE_LONG=0.42;
+function sayLen(t,v,long){ say(syl(t,long?v+v:v), long?RATE_LONG:RATE_SHORT); }
+function lenBar(long){ return '<span class="lenbar '+(long?'long':'short')+'"><i></i></span>'; }
+function lenCard(t,v,long){ return '<div class="lencard '+(long?'long':'short')+'"><div class="lensyl">'+syl(t,long?v+v:v)+'</div>'+lenBar(long)+'<div class="lenlab">'+(long?'🐢 طويل':'🐇 قصير')+'</div></div>'; }
+function lenDemoSheet(){
+  const q=round.qs[0];
+  return '<div class="sheet center lendemo"><h3 style="justify-content:center">قصير أم طويل؟</h3>'
+    +'<p style="margin:0 0 8px;font-size:20px">الحرف مع <b>و</b> أو <b>ا</b> أو <b>ي</b> صوته طويل</p>'
+    +'<div class="lenpair">'+lenCard(q.t,q.v,false)+lenCard(q.t,q.v,true)+'</div>'
+    +'<div class="row"><button class="btn ghost" data-act="lendemo">🔊 اسمعي مرة أخرى</button><button class="btn gold" data-act="lenstart">هيا نلعب ▶</button></div></div>';
+}
+function playLenDemo(){
+  const q=round.qs[0];
+  document.querySelectorAll(".lendemo .lencard").forEach(c=>c.classList.remove("play"));
+  const cards=document.querySelectorAll(".lendemo .lencard");
+  setTimeout(()=>{ if(cards[0]) cards[0].classList.add("play"); sayLen(q.t,q.v,false); },300);
+  setTimeout(()=>{ if(cards[1]) cards[1].classList.add("play"); sayLen(q.t,q.v,true); },1900);
+}
 function promptCurrent2(){
   const q=round.qs[round.cur];
-  if(round.type==="syl"||round.type==="long") say(q.say,0.7);
+  if(round.type==="syl") say(q.say,0.9);
+  else if(round.type==="long") sayLen(q.t,q.v,q.isLong);
   else if(round.type==="whear"||round.type==="wbuild") say(WORDS[q.w].w);
 }
 function gameHTML2(){
@@ -847,7 +877,11 @@ function gameHTML2(){
   const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
   const speak='<button class="speak" data-act="replay" aria-label="listen again">🔊</button>';
   let body='';
-  if(r.type==="syl"||r.type==="long"||r.type==="whear"){
+  if(r.type==="long"){
+    body='<div class="prompt">'+speak+gm.title+'</div>'
+      +'<div class="row"><button class="btn small ghost" data-act="lenhear" data-l="0">🐇 اسمعي القصير</button><button class="btn small ghost" data-act="lenhear" data-l="1">🐢 اسمعي الطويل</button></div>'
+      +'<div class="opts">'+q.opts.map((o,i)=>'<button class="opt" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
+  } else if(r.type==="syl"||r.type==="whear"){
     body='<div class="prompt">'+speak+gm.title+'</div><div class="opts">'+q.opts.map((o,i)=>'<button class="opt'+(o.word?' optw':'')+'" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
   } else if(r.type==="wpic"){
     body='<div class="prompt">'+gm.title+'<button class="speak small" data-act="help" aria-label="help">🔊</button></div><div class="bigword">'+WORDS[q.w].w+'</div><div class="opts">'+q.opts.map((o,i)=>'<button class="opt" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
@@ -878,6 +912,7 @@ function answer2(i){
   if(q.opts[i].ok){
     q.done=true; q.ok=(q.tries===0 && !q.helped);
     btn.classList.add("right"); sfx.ok(); bumpL2(q,q.ok?1:0);
+    if(round.type==="long"){ const rv=$("#reveal"); if(rv) rv.innerHTML=lenCard(q.t,q.v,q.isLong); setTimeout(()=>sayLen(q.t,q.v,q.isLong),250); setTimeout(nextQ,2600); return; }
     if(q.w!=null){ showWordReveal(q); setTimeout(()=>say(rnd(PRAISE)+" "+WORDS[q.w].w),250); }
     else setTimeout(()=>say(rnd(PRAISE)),250);
     setTimeout(nextQ,1900);
@@ -940,6 +975,45 @@ function readResult(q,alts){
     else { q.done=true; q.ok=false; showWordReveal(q); if(st) st.textContent=""; say(o.w,0.7); setTimeout(nextQ,2400); }
   }
 }
+/* Say the letter: pronunciation practice with speech recognition */
+// Accept the letter's name (with or without the final hamza), "حرف الباء", the bare letter, or the picture word starting with the right letter.
+const NAME_ALT={10:["زين"],0:["اليف"]};
+function letterNameForms(i){ const n=normAr(L[i].name).replace(/ء$/,""); return [n,n+"ء",normAr(L[i].ch)].concat(NAME_ALT[i]||[]); }
+function heardLetter(alts,i,mode){
+  return alts.some(a=>{
+    const toks=[].concat(...normAr(a).split(/\s+/).map(t=>[t,t.replace(/^ال/,"")])).map(t=>t.replace(/ء$/,""));
+    if(mode==="name"){ const ok=letterNameForms(i).map(x=>x.replace(/ء$/,"")); return toks.some(t=>ok.includes(t)); }
+    const w=normAr(L[i].word);
+    return toks.some(t=>t[0]===w[0] && (t===w || (w.length>=3 && lev(t,w)<=1)));
+  });
+}
+function micSpeak(){
+  const q=round.qs[round.cur]; if(q.done||listening||!SR) return;
+  stopClip(); try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){}
+  const btn=$("#micbtn"), st=$("#micstat"), l=L[q.t];
+  const rec=new SR(); rec.lang="ar-AE"; rec.interimResults=false; rec.maxAlternatives=5;
+  let got=false; listening=true; if(btn) btn.classList.add("on"); if(st) st.textContent="أسمعكِ… قولي الآن";
+  rec.onresult=e=>{ got=true; listening=false; if(btn) btn.classList.remove("on"); speakResult(q,[...e.results[0]].map(a=>a.transcript)); };
+  rec.onerror=e=>{ got=true; listening=false; if(btn) btn.classList.remove("on");
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){ micBlocked=true; if(st) st.textContent="الميكروفون غير مسموح. اطلبي من بابا أو ماما السماح به."; q.done=true; setTimeout(nextQ,2500); }
+    else if(st) st.textContent= e.error==="no-speech" ? "لم أسمع شيئًا. قولي بصوت أعلى" : "حاولي مرة أخرى"; };
+  rec.onend=()=>{ listening=false; if(btn) btn.classList.remove("on"); if(!got && st) st.textContent="لم أسمع شيئًا. قولي بصوت أعلى"; };
+  try{ rec.start(); }catch(e){ listening=false; if(btn) btn.classList.remove("on"); }
+}
+function speakResult(q,alts){
+  const st=$("#micstat"), l=L[q.t], target = q.mode==="name" ? l.name : l.word;
+  if(heardLetter(alts,q.t,q.mode)){
+    q.done=true; q.ok=q.tries<=1; bumpMastery(q.t,q.ok?1:0); sfx.ok();
+    if(st) st.textContent="✓"; const rv=$("#reveal"); if(rv) rv.textContent=l.pic+"  "+l.word;
+    setTimeout(()=>say(rnd(PRAISE)+" "+target),200); setTimeout(nextQ,2300);
+  } else {
+    q.tries++; sfx.no();
+    if(q.tries===1){ bumpMastery(q.t,-1); if(st) st.textContent="اسمعي جيدًا وحاولي مرة أخرى"; setTimeout(()=>say(target,0.65),400); }
+    else if(q.tries===2){ if(st) st.textContent="قولي معي ببطء"; setTimeout(()=>say(target,0.55),400); }
+    else { q.done=true; q.ok=false; if(st) st.textContent=""; const rv=$("#reveal"); if(rv) rv.textContent=l.pic+"  "+l.word; say(target,0.6); setTimeout(nextQ,2600); }
+  }
+}
+
 /* Reading path on the home screen */
 function pathSVG(k){
   const pos=[[380,286],[262,224],[150,150],[262,72]], l=l2(k);
@@ -1228,8 +1302,8 @@ function studioGroups(){
   const seen=new Set(), groups=[];
   const add=(key,title,tip,texts)=>{ const items=[]; texts.forEach(t=>{ const id=clipId(t); if(!seen.has(id)){ seen.add(id); items.push({t,id}); } }); groups.push({key,title,tip,items}); };
   const sylls=vs=>{ const a=[]; L.forEach(l=>vs.forEach(v=>a.push(syl(l.i,v)))); return a; };
-  add("syl","Vowel sounds","Say only the sound, short and clear: بَ is “ba”, not the letter name.",sylls(["a","i","u"]));
-  add("long","Long vowels","Stretch the vowel a little: با is “baa”, بو is “buu”, بي is “bii”.",sylls(["aa","ii","uu"]));
+  add("syl","Vowel sounds","Say only the sound, quick and crisp: بَ is a short “ba”, not the letter name.",sylls(["a","i","u"]));
+  add("long","Long vowels","Stretch the vowel clearly, about three times as long as the short sound: با is “baaaa”, بو is “buuuu”, بي is “biiii”. The difference is what the girls are learning.",sylls(["aa","ii","uu"]));
   add("names","Letter names","The name of the letter, as taught at school: ألِف، باء، تاء…",L.map(l=>l.name));
   add("l1words","Letter-house words","The picture word for each letter.",L.map(l=>l.word));
   add("rwords","Reading words","Read each word clearly, the way you would want them to read it.",WORDS.map(o=>o.w));
@@ -1396,6 +1470,10 @@ document.addEventListener("click",e=>{
     case "help": { const q=round.qs[round.cur]; if(!q.done){ q.helped=true; say(WORDS[q.w].w); } break; }
     case "tile": tile(+b.dataset.o); break;
     case "mic": mic(); break;
+    case "micspeak": micSpeak(); break;
+    case "lendemo": playLenDemo(); break;
+    case "lenstart": overlay=null; renderOverlay(); setTimeout(promptCurrent,300); break;
+    case "lenhear": { const q=round.qs[round.cur]; sayLen(q.t,q.v,b.dataset.l==="1"); break; }
     case "level": { const want=+b.dataset.l, k=kid(me);
       if(want===2 && !l2Open(k)){ overlay={type:"msg",icon:"📖",text:"افتحي 3 غرف في بيت الحروف لتبدئي القراءة"}; renderOverlay(); say("اِفْتَحِي ثَلَاثَ غُرَفٍ لِتَبْدَئِي الْقِرَاءَة"); break; }
       if(want===3 && !l3Open(k)){ const got=l2Earned(l2(k)); overlay={type:"msg",icon:"📚",text:"اجمعي كل ملصقات القراءة لتفتحي الجمل ("+got+" / "+L2STK.length+")"}; renderOverlay(); say("اِجْمَعِي كُلَّ مُلْصَقَاتِ الْقِرَاءَة"); break; }

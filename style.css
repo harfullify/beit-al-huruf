@@ -209,6 +209,27 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .nextstk small{font-weight:800;color:var(--muted)}
 .stk div.no.mystery{font-size:38px}
 
+/* Short vs long vowels */
+.lenbar{display:block;height:10px;border-radius:5px;background:#E6DCC8;margin:6px auto;overflow:hidden}
+.lenbar.short{width:26px}.lenbar.long{width:120px}
+.lenbar i{display:block;height:100%;width:100%;border-radius:5px;background:var(--gold)}
+.lencard.play .lenbar i{animation:fillbar .35s linear both}
+.lencard.long.play .lenbar i{animation-duration:1.5s}
+@keyframes fillbar{from{width:0}to{width:100%}}
+.lenpair{display:flex;gap:18px;justify-content:center;margin:6px 0 14px;flex-wrap:wrap}
+.lenpair .lencard{flex:0 0 190px;box-sizing:border-box}
+.lencard{background:#F6F0E2;border-radius:20px;padding:6px 22px 10px;min-width:150px}
+.lencard.long{background:#FFF1D6}
+.lensyl{font-family:var(--f-letter);font-size:72px;font-weight:700;line-height:1.4}
+.lenlab{font-weight:800;font-size:20px}
+#reveal .lencard{display:inline-block;padding:2px 16px 6px}
+#reveal .lensyl{font-size:44px}
+
+/* Say the letter */
+.saycard{display:flex;align-items:center;gap:22px;background:var(--card);border-radius:28px;padding:4px 34px;box-shadow:0 6px 0 var(--line)}
+.saycard .bigletter{font-family:var(--f-letter);font-size:clamp(100px,20vh,160px);font-weight:700;line-height:1.3}
+.saycard .saypic{font-size:clamp(70px,13vh,110px);line-height:1}
+
 /* Level 3 */
 .games.g5{grid-template-columns:repeat(5,1fr)}
 .bigsent{font-family:var(--f-letter);font-size:clamp(34px,6vw,58px);font-weight:700;line-height:1.7;background:var(--card);border-radius:24px;padding:4px 28px;box-shadow:0 6px 0 var(--line);text-align:center;max-width:100%}
