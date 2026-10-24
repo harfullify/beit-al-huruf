@@ -225,6 +225,14 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 #reveal .lencard{display:inline-block;padding:2px 16px 6px}
 #reveal .lensyl{font-size:44px}
 
+/* Writing pad */
+.wpad{position:relative;background:var(--card);border-radius:24px;box-shadow:0 6px 0 var(--line);touch-action:none}
+.wpad canvas{display:block;border-radius:24px;touch-action:none}
+.wmodel{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-letter);font-size:clamp(160px,30vh,260px);font-weight:700;color:var(--blue);opacity:0;pointer-events:none;transition:opacity .3s}
+.wmodel.on{opacity:.22}
+.whint{font-size:40px;line-height:1}
+.wgood{font-family:var(--f-letter);font-size:44px;color:var(--good)}
+
 /* Say the letter */
 .saycard{display:flex;align-items:center;gap:22px;background:var(--card);border-radius:28px;padding:4px 34px;box-shadow:0 6px 0 var(--line)}
 .saycard .bigletter{font-family:var(--f-letter);font-size:clamp(100px,20vh,160px);font-weight:700;line-height:1.3}

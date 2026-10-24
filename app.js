@@ -42,6 +42,7 @@ const GAMES = {
  whear:{ic:"👂",label:"أيّ كلمة؟",say:"اِسْمَعِي وَاخْتَارِي الْكَلِمَة",title:"اسمعي واختاري الكلمة"},
  wbuild:{ic:"🧩",label:"ركّبي",say:"رَكِّبِي الْكَلِمَة",title:"ركّبي الكلمة"},
  wread:{ic:"🎤",label:"اقرئي بصوتك",say:"اِقْرَئِي الْكَلِمَةَ بِصَوْتٍ عَالٍ",title:"اقرئي بصوتك"},
+ write:{ic:"✍️",label:"اكتبي",say:"اِسْمَعِي وَاكْتُبِي الْحَرْف",title:"اكتبي الحرف"},
  s3pic:{ic:"🖼️",label:"جملة وصورة",say:"اِقْرَئِي الْجُمْلَةَ وَاخْتَارِي الصُّورَة",title:"اقرئي الجملة واختاري الصورة"},
  s3fill:{ic:"✏️",label:"أكملي",say:"أَكْمِلِي الْجُمْلَة",title:"أكملي الجملة"},
  s3order:{ic:"🧩",label:"رتّبي",say:"رَتِّبِي الْكَلِمَاتِ لِتَصْنَعِي جُمْلَة",title:"رتّبي الجملة"},
@@ -324,7 +325,7 @@ function homeHTML(){
     ? '<div class="games g5">'+STAGES3.map((st,i)=>{ const ok=stage3State(k,i)==="open"; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock3')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?GAMES[st.type].ic:"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>'
     : lv===1
     ? '<div class="games'+(SR?' g5':'')+'">'+L1GAMES.filter(t=>t!=="speak"||SR).map(t=>'<button class="game" data-act="play" data-type="'+t+'"><span class="ic">'+GAMES[t].ic+'</span>'+GAMES[t].label+'</button>').join("")+'</div>'
-    : '<div class="games">'+STAGES.map((st,i)=>{ const ok=stageState(k,i)==="open"; const g=GAMES[st.type==="words"?"wpic":st.type]; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?(st.type==="words"?"📖":g.ic):"🔒")+'</span>'+st.name+'</button>'; }).join("")+'</div>';
+    : '<div class="games g5">'+STAGES.map((st,i)=>{ const ok=stageState(k,i)==="open"; const g=GAMES[st.type==="words"?"wpic":st.type]; return '<button class="game'+(ok?'':' off')+'" data-act="'+(ok?'play':'stlock')+'" data-type="'+st.type+'" data-s="'+i+'"><span class="ic">'+(ok?(st.type==="words"?"📖":g.ic):"🔒")+'</span>'+st.name+'</button>'; }).join("")+'<button class="game" data-act="play" data-type="write"><span class="ic">✍️</span>اكتبي</button></div>';
   return '<div class="screen">'+topBar()+'<div class="home">'
    + '<div class="house-wrap">'+tabs+(lv===1?houseSVG(k):lv===2?pathSVG(k):path3SVG(k))+'</div>'
    + '<div class="side">'
@@ -528,6 +529,7 @@ function nextQ(){
 
 /* Tracing */
 function afterGameRender(){
+  if(round.type==="write"){ setupWritePad(); return; }
   if(round.type!=="trace") return;
   const q=round.qs[round.cur], wrap=$("#tw"), cv=$("#tc");
   const size=Math.max(220,Math.min(innerWidth-48, innerHeight-260, 460));
@@ -627,7 +629,7 @@ let endInfo=null;
 function endRound(){
   const r=round, k=pendingKid||kid(me); pendingKid=null;
   const correct=r.qs.filter(q=>q.ok).length;
-  const need = r.type==="trace" ? 0 : r.type==="wbuild"||r.type==="s3story" ? 1 : r.type==="wread"||r.type==="s3read"||r.type==="s3order"||r.type==="speak" ? 2 : 3;
+  const need = r.type==="trace" ? 0 : r.type==="wbuild"||r.type==="s3story" ? 1 : r.type==="wread"||r.type==="s3read"||r.type==="s3order"||r.type==="speak"||r.type==="write" ? 2 : 3;
   const pass = correct>=need;
   const msgs=[];
   k.stars=(k.stars||0)+correct;
@@ -777,8 +779,8 @@ const STAGES=[
  {type:"words",name:"الكلمات",     sample:"بَاب",     need:20},
  {type:"wread",name:"اقرئي بصوتك", sample:"🎤",       need:0}
 ];
-const L2TYPES=["syl","long","wpic","whear","wbuild","wread","words","auto2"];
-const STAGE_OF={syl:0,long:1,wpic:2,whear:2,wbuild:2,wread:3};
+const L2TYPES=["syl","long","wpic","whear","wbuild","wread","words","auto2","write"];
+const STAGE_OF={syl:0,long:1,wpic:2,whear:2,wbuild:2,wread:3,write:-1};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
 let micBlocked=false;
 function l2(k){ return Object.assign({pts:[0,0,0,0],words:{},wst:[],open:false},k.l2||{}); }
@@ -812,12 +814,15 @@ function makeRound2(type){
   if(type==="auto2"){
     const open=STAGES.map((s,i)=>i).filter(i=>stageState(k,i)==="open");
     const top=open[open.length-1];
-    type=STAGES[(Math.random()<0.6||open.length===1)?top:rnd(open)].type;
+    type= Math.random()<0.2 ? "write" : STAGES[(Math.random()<0.6||open.length===1)?top:rnd(open)].type; // writing replaces tracing from Level 2
   }
   if(type==="words") type=rnd(["wpic","whear","wbuild"]);
   const stage=STAGE_OF[type];
   let qs=[];
-  if(type==="syl"){
+  if(type==="write"){
+    qs=pickLetters(k,4).map(t=>({stage:null,t,tries:0,done:false,ok:false}));
+    wrPrepare();
+  } else if(type==="syl"){
     qs=pickLetters(k,4).map(t=>{
       const v=rnd(["a","i","u"]);
       const opts = Math.random()<0.6 ? ["a","i","u"].map(x=>({html:syl(t,x),ok:x===v})) : options(k,t).map(x=>({html:syl(x,v),ok:x===t}));
@@ -868,7 +873,8 @@ function playLenDemo(){
 }
 function promptCurrent2(){
   const q=round.qs[round.cur];
-  if(round.type==="syl") say(q.say,0.9);
+  if(round.type==="write") say(L[q.t].name,0.75);
+  else if(round.type==="syl") say(q.say,0.9);
   else if(round.type==="long") sayLen(q.t,q.v,q.isLong);
   else if(round.type==="whear"||round.type==="wbuild") say(WORDS[q.w].w);
 }
@@ -877,7 +883,11 @@ function gameHTML2(){
   const dots='<div class="dots">'+r.qs.map((x,n)=>'<i class="'+(x.done?(x.ok?'ok':'miss'):(n===r.cur?'cur':''))+'"></i>').join("")+'</div>';
   const speak='<button class="speak" data-act="replay" aria-label="listen again">🔊</button>';
   let body='';
-  if(r.type==="long"){
+  if(r.type==="write"){
+    body='<div class="prompt"><button class="speak" data-act="replay" aria-label="listen again">🔊</button>'+gm.title+' <span class="whint">'+L[q.t].pic+'</span></div>'
+      +'<div class="wpad"><canvas id="wc"></canvas><div class="wmodel" id="wmodel"></div></div>'
+      +'<div class="row"><button class="btn ghost" data-act="wclear">🧽 امسحي</button><button class="btn gold" data-act="wcheck">✓ انتهيت</button></div><div class="micstat" id="wstat"></div>';
+  } else if(r.type==="long"){
     body='<div class="prompt">'+speak+gm.title+'</div>'
       +'<div class="row"><button class="btn small ghost" data-act="lenhear" data-l="0">🐇 اسمعي القصير</button><button class="btn small ghost" data-act="lenhear" data-l="1">🐢 اسمعي الطويل</button></div>'
       +'<div class="opts">'+q.opts.map((o,i)=>'<button class="opt" data-act="answer2" data-o="'+i+'" id="p'+i+'">'+o.html+'</button>').join("")+'</div><div class="reveal" id="reveal"></div>';
@@ -899,7 +909,7 @@ function gameHTML2(){
 function bumpL2(q,d){
   if(!d) return;
   const k=pendingKid||kid(me), l=l2(k), pts=l.pts.slice();
-  pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
+  if(q.stage!=null) pts[q.stage]=Math.max(0,(pts[q.stage]||0)+d);
   const words=Object.assign({},l.words);
   if(q.w!=null) words[q.w]=Math.max(0,Math.min(3,(words[q.w]||0)+d));
   const sc=(l.sc||0)+(d>0?1:0), cur=curOf(l)+(d>0?1:0);
@@ -1012,6 +1022,165 @@ function speakResult(q,alts){
     else if(q.tries===2){ if(st) st.textContent="قولي معي ببطء"; setTimeout(()=>say(target,0.55),400); }
     else { q.done=true; q.ok=false; if(st) st.textContent=""; const rv=$("#reveal"); if(rv) rv.textContent=l.pic+"  "+l.word; say(target,0.6); setTimeout(nextQ,2600); }
   }
+}
+
+/* Handwriting check for single letters: compares the main shape with every letter's printed shape,
+   then checks the dots (how many, above/below). Lenient on purpose: it should accept "roughly right". */
+const WR_DOTS={0:[0,""],1:[1,"b"],2:[2,"a"],3:[3,"a"],4:[1,"m"],5:[0,""],6:[1,"a"],7:[0,""],8:[1,"a"],9:[0,""],10:[1,"a"],11:[0,""],12:[3,"a"],13:[0,""],14:[1,"a"],
+  15:[0,""],16:[1,"a"],17:[0,""],18:[1,"a"],19:[1,"a"],20:[2,"a"],21:[0,""],22:[0,""],23:[0,""],24:[1,"a"],25:[0,""],26:[0,""],27:[2,"b"]};
+const WR_LOOSE_MARKS={0:1,21:1}; // أ (hamza) and ك (inner mark) may have an extra small mark, or not
+const WR_GROUPS=[[1,2,3],[4,5,6],[7,8],[9,10],[11,12],[13,14],[15,16],[17,18]];
+const wrGroupOf=i=>{ const g=WR_GROUPS.findIndex(g=>g.includes(i)); return g<0?"s"+i:"g"+g; };
+let WR_BODIES=null; const WR_TOL=1.2, WR_RANK=2;
+// Printed shapes from four quite different typefaces; a child's letter only has to be close to one of them.
+const WR_ALL_FONTS=['700 SIZE "Noto Naskh Arabic", serif','400 SIZE "Noto Sans Arabic", sans-serif','400 SIZE "Amiri", serif','400 SIZE "Cairo", sans-serif'];
+let WR_FONTS=WR_ALL_FONTS.slice(0,1), wrReady=null;
+function wrPrepare(){
+  if(wrReady) return wrReady;
+  wrReady=Promise.all(WR_ALL_FONTS.map(f=>document.fonts&&document.fonts.load?document.fonts.load(f.replace("SIZE","40px"),"بتث").catch(()=>null):null)).then(()=>{
+    WR_FONTS=WR_ALL_FONTS.filter(f=>{ try{ return document.fonts.check(f.replace("SIZE","40px"),"بتث"); }catch(e){ return false; } });
+    if(!WR_FONTS.length) WR_FONTS=WR_ALL_FONTS.slice(0,1);
+    WR_BODIES=wrGlyphBodies(WR_FONTS);
+  });
+  return wrReady;
+}
+function wrNorm(pts){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; pts.forEach(([x,y])=>{ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; });
+  const s=Math.max(x1-x0,y1-y0)||1, cx=(x0+x1)/2, cy=(y0+y1)/2;
+  return {pts:pts.map(([x,y])=>[(x-cx)/s,(y-cy)/s]), w:(x1-x0)/s, h:(y1-y0)/s};
+}
+function wrThin(on,N){
+  let changed=true;
+  while(changed){ changed=false; for(const step of [0,1]){ const del=[]; for(let y=1;y<N-1;y++) for(let x=1;x<N-1;x++){ const i=y*N+x; if(!on[i]) continue;
+    const n=[on[i-N],on[i-N+1],on[i+1],on[i+N+1],on[i+N],on[i+N-1],on[i-1],on[i-N-1]]; const B=n.reduce((a,b)=>a+b,0); if(B<2||B>6) continue;
+    let A=0; for(let k=0;k<8;k++) if(!n[k]&&n[(k+1)%8]) A++; if(A!==1) continue;
+    if(step===0){ if(n[0]*n[2]*n[4]||n[2]*n[4]*n[6]) continue; } else { if(n[0]*n[2]*n[6]||n[0]*n[4]*n[6]) continue; }
+    del.push(i); } del.forEach(i=>on[i]=0); if(del.length) changed=true; } }
+  return on;
+}
+function wrGlyphBodies(fonts){
+  const N=90;
+  return L.map(l=>fonts.map(fontFam=>{
+    const c=document.createElement("canvas"); c.width=c.height=N; const x=c.getContext("2d");
+    x.font=fontFam.replace("SIZE","100px"); const m=x.measureText(l.ch);
+    const bw=(m.actualBoundingBoxLeft+m.actualBoundingBoxRight)||60, bh=(m.actualBoundingBoxAscent+m.actualBoundingBoxDescent)||80;
+    const fs=100*Math.min(0.8*N/bw,0.8*N/bh); x.font=fontFam.replace("SIZE",fs+"px"); const m2=x.measureText(l.ch);
+    x.textBaseline="alphabetic"; x.fillText(l.ch,N/2+(m2.actualBoundingBoxLeft-m2.actualBoundingBoxRight)/2,N/2+(m2.actualBoundingBoxAscent-m2.actualBoundingBoxDescent)/2);
+    const d=x.getImageData(0,0,N,N).data, on=new Uint8Array(N*N); for(let i=0;i<N*N;i++) on[i]=d[i*4+3]>100?1:0;
+    // largest connected piece = the body (drop dots and hamza), then thin it to a pen line like a child's stroke
+    const lab=new Int32Array(N*N).fill(-1); let best=null;
+    for(let i=0;i<N*N;i++){ if(!on[i]||lab[i]>=0) continue; const cells=[],st=[i]; lab[i]=1;
+      while(st.length){ const q=st.pop(); cells.push(q); const qx=q%N,qy=(q-qx)/N; for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ const xx=qx+a,yy=qy+b; if(xx<0||yy<0||xx>=N||yy>=N) continue; const j=yy*N+xx; if(on[j]&&lab[j]<0){ lab[j]=1; st.push(j); } } }
+      if(!best||cells.length>best.length) best=cells; }
+    const only=new Uint8Array(N*N); best.forEach(q=>only[q]=1); wrThin(only,N);
+    const pts=[]; for(let i=0;i<N*N;i++) if(only[i]) pts.push([i%N,Math.floor(i/N)]);
+    return wrNorm(pts);
+  }));
+}
+function wrChamfer(A,B){
+  const one=(P,Q)=>{ let s=0; for(const [x,y] of P){ let m=1e9; for(const [u,v] of Q){ const d=(x-u)*(x-u)+(y-v)*(y-v); if(d<m) m=d; } s+=Math.sqrt(m); } return s/P.length; };
+  return one(A,B)+one(B,A);
+}
+function wrResample(stroke,step){
+  const out=[stroke[0]]; let acc=0;
+  for(let i=1;i<stroke.length;i++){ const [x0,y0]=stroke[i-1],[x1,y1]=stroke[i]; const d=Math.hypot(x1-x0,y1-y0); if(!d) continue;
+    let t=step-acc; while(t<=d){ out.push([x0+(x1-x0)*t/d,y0+(y1-y0)*t/d]); t+=step; } acc=(acc+d)%step; }
+  out.push(stroke[stroke.length-1]); return out;
+}
+// strokes: array of arrays of [x,y] in screen pixels. Returns {ok, why, best}
+function wrRecognize(strokes,target){
+  strokes=strokes.filter(s=>s.length);
+  if(!strokes.length) return {ok:false,why:"empty"};
+  if(!WR_BODIES) WR_BODIES=wrGlyphBodies(WR_FONTS);
+  const bb=s=>{ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; s.forEach(([x,y])=>{ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }); return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; };
+  const all=bb([].concat(...strokes)), size=Math.max(all.w,all.h)||1;
+  // small strokes are dots (or the hamza); the rest is the body
+  const info=strokes.map(s=>{ const b=bb(s); return {s,b,small:Math.max(b.w,b.h)<0.24*size}; });
+  let body=info.filter(o=>!o.small); if(!body.length){ body=[info.reduce((a,o)=>Math.max(o.b.w,o.b.h)>Math.max(a.b.w,a.b.h)?o:a)]; }
+  const marks=info.filter(o=>o.small && !body.includes(o));
+  const bodyPts=[].concat(...body.map(o=>wrResample(o.s,size/60)));
+  const nb=wrNorm(bodyPts);
+  const dists=WR_BODIES.map(ts=>Math.min(...ts.map(g=>wrChamfer(nb.pts,g.pts))));
+  // compare by shape family (letters that differ only in dots share a family)
+  const fam={}; dists.forEach((d,i)=>{ const g=wrGroupOf(i); if(fam[g]==null||d<fam[g]) fam[g]=d; });
+  const ranked=Object.keys(fam).sort((a,b)=>fam[a]-fam[b]);
+  const tg=wrGroupOf(target), bestD=fam[ranked[0]];
+  const rk=ranked.indexOf(tg); const shapeOk = rk===0 || (rk>0 && rk<=WR_RANK && fam[tg]<=bestD*WR_TOL);
+  if(!shapeOk) return {ok:false,why:"shape",best:ranked[0],rank:ranked.indexOf(tg)};
+  // dots: merge marks that touch, count them, find where they sit
+  const B=bb(bodyPts), clusters=[];
+  marks.forEach(o=>{ const c=clusters.find(c=>!(o.b.x0>c.x1+0.04*size||o.b.x1<c.x0-0.04*size||o.b.y0>c.y1+0.04*size||o.b.y1<c.y0-0.04*size));
+    if(c){ c.x0=Math.min(c.x0,o.b.x0); c.x1=Math.max(c.x1,o.b.x1); c.y0=Math.min(c.y0,o.b.y0); c.y1=Math.max(c.y1,o.b.y1); c.n++; c.wide=c.wide||o.b.w>1.6*Math.max(o.b.h,0.02*size); }
+    else clusters.push({x0:o.b.x0,x1:o.b.x1,y0:o.b.y0,y1:o.b.y1,n:1,wide:o.b.w>1.6*Math.max(o.b.h,0.02*size)}); });
+  const [need,pos]=WR_DOTS[target];
+  if(WR_LOOSE_MARKS[target]) return {ok:true};
+  let count=0, where=null;
+  if(clusters.length){
+    // all dots of a letter sit together; use the group of marks as one
+    const cy=clusters.reduce((a,c)=>a+(c.y0+c.y1)/2,0)/clusters.length, rel=(cy-B.y0)/((B.y1-B.y0)||1);
+    where = rel<0.35?"a":rel>0.7?"b":"m";
+    count = marks.length; // each separate stroke/tap counts as one dot
+    if(marks.length===1 && clusters[0].wide) count=-1; // one dash: two or three dots written together
+  }
+  if(need===0) return clusters.length? {ok:false,why:"extra"} : {ok:true};
+  if(!clusters.length) return {ok:false,why:"dots"};
+  const okCount = count===need || (count===-1 && need>=2) || (need===3 && count===2) || (need===2 && count===1 && clusters[0].wide);
+  const okPos = where===pos || where==="m" || (pos==="m" && where==="b");
+  return okCount&&okPos ? {ok:true} : {ok:false,why:"dots",count,where};
+}
+
+/* Writing from memory (reading level and up): hear a letter, write it with a stylus or finger */
+let wpad=null;
+function setupWritePad(){
+  const cv=$("#wc"); if(!cv) return;
+  const size=Math.max(240,Math.min(innerWidth-48, innerHeight-300, 480)), dpr=window.devicePixelRatio||1;
+  cv.width=size*dpr; cv.height=size*dpr; cv.style.width=size+"px"; cv.style.height=size+"px";
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr);
+  wpad={cv,ctx,size,strokes:[],cur:null,penSeen:wpad?wpad.penSeen:false};
+  drawPadGuides();
+  const pos=e=>{ const b=cv.getBoundingClientRect(); return [e.clientX-b.left,e.clientY-b.top]; };
+  cv.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="pen") wpad.penSeen=true;
+    if(wpad.penSeen && e.pointerType==="touch") return; // palm rejection once a stylus is used
+    const q=round.qs[round.cur]; if(q.done) return;
+    cv.setPointerCapture(e.pointerId); wpad.cur=[pos(e)]; wpad.strokes.push(wpad.cur); dotAt(wpad.cur[0]);
+  });
+  cv.addEventListener("pointermove",e=>{ if(!wpad.cur) return; const p=pos(e), l=wpad.cur[wpad.cur.length-1]; wpad.cur.push(p); line(l,p); });
+  const up=()=>{ wpad.cur=null; };
+  cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",up);
+  function line(a,b){ ctx.strokeStyle=G(me).color; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(5,size*0.03); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }
+  function dotAt(p){ line(p,[p[0]+0.1,p[1]+0.1]); }
+}
+function drawPadGuides(){
+  const {ctx,size}=wpad; ctx.clearRect(0,0,size,size);
+  ctx.strokeStyle="#E8DFCB"; ctx.lineWidth=2; ctx.setLineDash([8,8]);
+  [0.3,0.62].forEach(f=>{ ctx.beginPath(); ctx.moveTo(14,size*f); ctx.lineTo(size-14,size*f); ctx.stroke(); });
+  ctx.setLineDash([]);
+}
+function showModel(i,ms){
+  const m=$("#wmodel"); if(!m) return; m.textContent=L[i].ch; m.classList.add("on");
+  if(ms) setTimeout(()=>{ const n=$("#wmodel"); if(n) n.classList.remove("on"); },ms);
+}
+async function checkWriting(){
+  const q=round.qs[round.cur]; if(q.done||!wpad) return;
+  const st=$("#wstat");
+  if(!wpad.strokes.length){ if(st) st.textContent="اكتبي الحرف أولًا"; return; }
+  if(st) st.textContent="…";
+  await wrPrepare();
+  const res=wrRecognize(wpad.strokes,q.t);
+  if(res.ok){
+    q.done=true; q.ok=q.tries===0; bumpMastery(q.t,q.ok?1:0); bumpL2(q,q.ok?1:0); sfx.ok();
+    if(st) st.innerHTML='✓ <span class="wgood">'+L[q.t].ch+'</span>';
+    setTimeout(()=>say(rnd(PRAISE)+" "+L[q.t].name),200); setTimeout(nextQ,2300); return;
+  }
+  q.tries++; sfx.no(); if(q.tries===1){ bumpMastery(q.t,-1); bumpL2(q,-1); }
+  if(q.tries>=3){ q.done=true; q.ok=false; showModel(q.t,0); if(st) st.textContent="هكذا نكتبه"; say(L[q.t].name,0.7); setTimeout(nextQ,3200); return; }
+  if(res.why==="dots"){ if(st) st.textContent="الشكل صحيح! انتبهي للنقاط"; say("اِنْتَبِهِي لِلنِّقَاط"); return; }
+  if(res.why==="extra"){ if(st) st.textContent="هذا الحرف بلا نقاط"; say("هَذَا الْحَرْفُ بِلَا نِقَاط"); return; }
+  if(st) st.textContent= q.tries===1 ? "حاولي مرة أخرى" : "انظري جيدًا ثم اكتبي";
+  say("حَاوِلِي مَرَّةً أُخْرَى");
+  if(q.tries===2) showModel(q.t,2500);
+  wpad.strokes=[]; setTimeout(drawPadGuides,700);
 }
 
 /* Reading path on the home screen */
@@ -1471,6 +1640,8 @@ document.addEventListener("click",e=>{
     case "tile": tile(+b.dataset.o); break;
     case "mic": mic(); break;
     case "micspeak": micSpeak(); break;
+    case "wclear": if(wpad && !round.qs[round.cur].done){ wpad.strokes=[]; drawPadGuides(); const st=$("#wstat"); if(st) st.textContent=""; } break;
+    case "wcheck": checkWriting(); break;
     case "lendemo": playLenDemo(); break;
     case "lenstart": overlay=null; renderOverlay(); setTimeout(promptCurrent,300); break;
     case "lenhear": { const q=round.qs[round.cur]; sayLen(q.t,q.v,b.dataset.l==="1"); break; }
