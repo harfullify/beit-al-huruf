@@ -1,0 +1,14 @@
+{
+  "name": "Number City",
+  "short_name": "Number City",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#CDE9F6",
+  "theme_color": "#2F6FD6",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

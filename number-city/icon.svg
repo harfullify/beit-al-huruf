@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#CDE9F6"/>
+  <circle cx="404" cy="112" r="44" fill="#FFD36E"/>
+  <path d="M0 360 H512 V400 A112 112 0 0 1 400 512 H112 A112 112 0 0 1 0 400Z" fill="#EFD9A8"/>
+  <rect x="120" y="214" width="272" height="150" fill="#E3C793" stroke="#C7A56A" stroke-width="6"/>
+  <rect x="112" y="196" width="288" height="20" fill="#fff"/>
+  <g fill="#fff"><rect x="120" y="176" width="16" height="20"/><rect x="156" y="176" width="16" height="20"/><rect x="192" y="176" width="16" height="20"/><rect x="228" y="176" width="16" height="20"/><rect x="264" y="176" width="16" height="20"/><rect x="300" y="176" width="16" height="20"/><rect x="336" y="176" width="16" height="20"/><rect x="372" y="176" width="16" height="20"/></g>
+  <path d="M220 364 V290 A36 36 0 0 1 292 290 V364Z" fill="#3B2A22"/>
+  <rect x="230" y="300" width="20" height="22" rx="3" fill="#D9A63A"/><rect x="262" y="300" width="20" height="22" rx="3" fill="#D9A63A"/>
+  <path d="M148 330 V262 A20 20 0 0 1 188 262 V330Z M324 330 V262 A20 20 0 0 1 364 262 V330Z" fill="#8CC8E8" stroke="#fff" stroke-width="6"/>
+  <text x="256" y="128" text-anchor="middle" font-family="Arial Rounded MT Bold,Arial,sans-serif" font-size="96" font-weight="700" fill="#2F6FD6">123</text>
+</svg>
