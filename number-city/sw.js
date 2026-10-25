@@ -1,5 +1,5 @@
 // Network first, cache as fallback: updates arrive as soon as the tablet is online, and the game still opens offline.
-const CACHE = "nc-v1";
+const CACHE = "nc-v2";
 const SHELL = ["./", "./index.html", "./app.js", "./manifest.webmanifest", "./firebase-config.js", "./icon.svg"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));

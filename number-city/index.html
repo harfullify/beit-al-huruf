@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2F6FD6">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Number City</title>
@@ -18,7 +19,7 @@
   --me:#2F6FD6; --me-soft:#E3ECFB; --me-dark:#1F4FA6;
   --f-big:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
   --f-read:"Andika","Trebuchet MS",system-ui,sans-serif;
-  color-scheme:light;
+  color-scheme:light dark;
 }
 html,body{height:100%}
 body{margin:0;background:linear-gradient(180deg,var(--sky-hi) 0%,var(--sky) 100%);background-color:var(--sky);color:var(--ink);font-family:var(--f-read);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;overflow-x:hidden}
@@ -103,7 +104,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:4px solid 
 .ch.show{border-color:var(--good);box-shadow:0 0 0 7px rgba(46,158,79,.35);animation:pop .5s 2}
 @keyframes pop{50%{transform:scale(1.14)}}
 @keyframes shake{25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
-.cover{position:absolute;inset:0;display:grid;place-items:center;background:var(--soft);font-family:var(--f-big);font-size:30px;font-weight:600;color:var(--ink-soft);border-radius:28px;padding:16px}
+.cover{position:absolute;inset:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--soft);font-family:var(--f-big);font-size:30px;font-weight:600;color:var(--ink-soft);border-radius:28px;padding:16px;text-align:center}
+.cover small{font-size:21px;color:var(--me);text-decoration:underline;text-underline-offset:4px}
 .hintline{font-size:20px;color:var(--ink-soft);text-align:center;max-width:36ch}
 .big-sum{font-family:var(--f-big);font-weight:700;font-size:clamp(54px,11vw,108px);letter-spacing:2px;line-height:1.1;white-space:nowrap}
 .word{font-family:var(--f-big);font-weight:700;font-size:clamp(50px,10vw,96px);color:var(--me)}
@@ -119,7 +121,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:4px solid 
 
 /* dice + ten frame */
 .dice{width:170px;height:170px;background:#fff;border:5px solid var(--ink);border-radius:30px;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:14px;box-sizing:border-box;gap:4px}
-.dice i{border-radius:50%;background:var(--ink);margin:5px}
+.dice i{border-radius:50%;background:#D2453B;margin:5px}
 .dice i.e{background:none}
 .tf{display:grid;grid-template-columns:repeat(5,min(62px,15vw));grid-auto-rows:min(62px,15vw);border:4px solid var(--ink);border-radius:10px;overflow:hidden;background:#fff}
 .tf i{border:2px solid var(--line);display:grid;place-items:center;position:relative;font-style:normal}

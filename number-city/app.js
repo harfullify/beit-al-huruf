@@ -42,7 +42,10 @@ const SFX={
 let VOICE=null;
 function pickVoice(){try{const vs=speechSynthesis.getVoices();VOICE=vs.find(v=>/en[-_]GB/i.test(v.lang)&&/female/i.test(v.name))||vs.find(v=>/en[-_]GB/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null;}catch(e){}}
 try{speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}catch(e){}
-function speak(t){if(!DB.voice||!t)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(t).replace(/−/g,' take away ').replace(/\+/g,' plus ').replace(/=/g,' equals '));u.lang='en-GB';u.rate=.9;u.pitch=1.05;if(VOICE)u.voice=VOICE;speechSynthesis.speak(u);}catch(e){}}
+function speak(t,done){let fired=false;const fin=()=>{if(fired)return;fired=true;if(done)done();};
+  if(done)setTimeout(fin,Math.min(6000,1000+String(t||'').length*80));
+  if(!DB.voice||!t){if(done)setTimeout(fin,250);return;}
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(t).replace(/−/g,' take away ').replace(/\+/g,' plus ').replace(/=/g,' equals '));u.lang='en-GB';u.rate=.9;u.pitch=1.05;if(VOICE)u.voice=VOICE;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);}catch(e){}}
 function hush(){try{speechSynthesis.cancel();}catch(e){}}
 
 function confetti(n){for(let i=0;i<n;i++){const s=document.createElement('span');s.className='conf';s.textContent=pick(['⭐','✨','🎉','🌟']);s.style.left=rnd(2,96)+'vw';s.style.animationDelay=(Math.random()*.9)+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),3600);}}
@@ -165,7 +168,7 @@ const genCount=(lo,hi)=>(easy,pic,nc)=>{const n=rnd(lo,easy?Math.min(hi,lo+3):hi
 function genShapes(easy,pic,nc){const pool=easy?['circle','square','triangle','rectangle']:Object.keys(SHAPES);const t=pick(pool);const opts=shuffle([t,...shuffle(pool.filter(x=>x!==t)).slice(0,nc-1)]);const cols=shuffle(SHCOL);
   return{text:`Tap the ${t}.`,show:h=>`<div class="word">${t}</div>`+(h?shapeSVG(t,'',110,true):''),choices:opts.map((v,i)=>({v,html:shapeSVG(v,cols[i%cols.length],78)})),answer:t,answerSay:`the ${t}`};}
 
-const genQuick=(max,frame)=>(easy,pic,nc)=>{const n=rnd(1,easy?(frame?6:3):max);return{text:'How many dots?',say:'Look quickly! How many dots?',flash:frame?2600:1800,show:h=>frame?tenFrame(n,h):dice(n,h),choices:ch(near(n,nc,1,frame?10:6)),answer:n};};
+const genQuick=(max,frame)=>(easy,pic,nc)=>{const n=rnd(1,easy?(frame?6:3):max);return{text:'How many dots?',say:'Look quickly! How many dots?',flash:frame?4000:3000,show:h=>frame?tenFrame(n,h):dice(n,h),choices:ch(near(n,nc,1,frame?10:6)),answer:n};};
 
 const genTrain=kind=>(easy,pic,nc)=>{let start,step=1,len=5,miss;
   if(kind==='next10'){len=4;start=rnd(1,easy?3:7);miss=3;}
@@ -330,9 +333,10 @@ function renderQ(hint){const q=R.q;R.hint=hint;
   else{stg.innerHTML=q.show(hint);
     const html=q.choices.map((c,i)=>`<button class="ch${c.txt?' txt':''}${c.html?' pic':''}${c.big?' jumbo':''}${R.wrong.has(i)?' wrong':''}" data-i="${i}" onclick="pickC(this)">${c.html?(hint&&c.hhtml?c.hhtml:c.html):c.v}</button>`).join('');
     if(q.inStage){stg.insertAdjacentHTML('beforeend',`<div class="choices">${html}</div>`);chs.hidden=true;}else chs.innerHTML=html;}
-  if(!hint){speak(q.say||q.text);
-    if(q.flash)setTimeout(()=>{if(R&&R.q===q&&!R.hint&&!R.locked){const s2=$('#stage');if(s2){const c=document.createElement('div');c.className='cover';c.textContent='How many did you see?';s2.appendChild(c);}}},q.flash);}
+  if(!hint){if(q.flash)speak(q.say||q.text,()=>coverLater(q,q.flash));else speak(q.say||q.text);}
 }
+function coverLater(q,ms){if(!R)return;clearTimeout(R.coverT);R.coverT=setTimeout(()=>{if(R&&R.q===q&&!R.hint&&!R.locked){const s2=$('#stage');if(s2&&!s2.querySelector('.cover'))s2.insertAdjacentHTML('beforeend','<button class="cover" onclick="peek()">How many dots did you see?<small>Tap here to look again</small></button>');}},ms);}
+function peek(){const c=$('.cover');if(c)c.remove();if(R&&R.q&&!R.locked)coverLater(R.q,2500);}
 function sayQ(){if(R&&R.q)speak(R.q.say||R.q.text);}
 function pickC(btn){if(!R||R.locked)return;const i=+btn.dataset.i,c=R.q.choices[i];if(c.v===R.q.answer)handle(true,btn);else{R.wrong.add(i);handle(false,btn);}}
 function handle(ok,btn){const q=R.q;
